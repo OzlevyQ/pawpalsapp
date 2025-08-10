@@ -1,0 +1,185 @@
+{
+  "common": {
+    "loading": "טוען...",
+    "error": "שגיאה",
+    "success": "הצלחה",
+    "ok": "אוקיי",
+    "cancel": "ביטול",
+    "save": "שמור",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "add": "הוסף",
+    "search": "חפש",
+    "retry": "נסה שוב",
+    "refresh": "רענן",
+    "continue": "המשך",
+    "back": "חזור",
+    "next": "הבא",
+    "previous": "קודם",
+    "close": "סגור",
+    "done": "סיום",
+    "yes": "כן",
+    "no": "לא"
+  },
+  "auth": {
+    "welcome": "ברוכים הבאים ל-PawPals",
+    "subtitle": "רשת חברתית לבעלי כלבים",
+    "description": "מצא גני כלבים, חבר לקהילה ותיצור חברויות חדשות",
+    "login": "התחבר לחשבון קיים",
+    "register": "יצירת חשבון חדש",
+    "continueAsGuest": "המשך כאורח",
+    "guestDescription": "צפה בגנים ללא הרשמה",
+    "email": "כתובת אימייל",
+    "password": "סיסמה",
+    "confirmPassword": "אימות סיסמה",
+    "firstName": "שם פרטי",
+    "lastName": "שם משפחה",
+    "phone": "טלפון",
+    "forgotPassword": "שכחת סיסמה?",
+    "loginTitle": "התחברות לחשבון",
+    "loginSubtitle": "ברוך השב! אנו שמחים לראותך שוב",
+    "registerTitle": "יצירת חשבון חדש",
+    "registerSubtitle": "הצטרף לקהילת בעלי הכלבים שלנו",
+    "googleSignIn": "המשך עם Google",
+    "alreadyHaveAccount": "יש לך כבר חשבון?",
+    "dontHaveAccount": "אין לך חשבון?",
+    "loginNow": "התחבר עכשיו",
+    "registerNow": "הירשם עכשיו",
+    "termsAndConditions": "בהרשמה אתה מסכים לתנאי השימוש ולמדיניות הפרטיות שלנו",
+    "loginSuccess": "התחברת בהצלחה!",
+    "registerSuccess": "הרשמה הושלמה!",
+    "registerSuccessMessage": "חשבונך נוצר בהצלחה",
+    "validationErrors": {
+      "required": "שדה חובה",
+      "emailInvalid": "כתובת אימייל לא תקינה",
+      "passwordTooShort": "הסיסמה חייבת להכיל לפחות 6 תווים",
+      "passwordMismatch": "הסיסמאות אינן זהות",
+      "fillAllFields": "אנא מלא את כל השדות"
+    }
+  },
+  "navigation": {
+    "home": "בית",
+    "parks": "גנים",
+    "social": "חברתי",
+    "events": "אירועים",
+    "profile": "פרופיל"
+  },
+  "home": {
+    "greeting": "שלום",
+    "guestGreeting": "שלום אורח!",
+    "subtitle": "איך נעזור לך היום?",
+    "guestSubtitle": "גלה גני כלבים בסביבתך",
+    "signUpPrompt": "הירשם עכשיו!",
+    "signUpDescription": "קבל גישה לכל התכונות: צ'ק-אין בגנים, חברות, אירועים ועוד",
+    "dailyMissions": "משימות יומיות",
+    "quickActions": "פעולות מהירות",
+    "recentActivity": "פעילות אחרונה",
+    "stats": {
+      "points": "נקודות",
+      "level": "רמה",
+      "streak": "רצף"
+    },
+    "missions": {
+      "visitPark": "בקר בגן כלבים",
+      "completed": "הושלם"
+    },
+    "actions": {
+      "quickCheckin": "צ'ק-אין מהיר",
+      "scanQR": "סרוק QR בגן",
+      "nearbyParks": "גנים קרובים",
+      "findParks": "מצא גנים בסביבה"
+    }
+  },
+  "parks": {
+    "title": "גני כלבים",
+    "searchPlaceholder": "חפש גני כלבים...",
+    "filters": {
+      "all": "הכל",
+      "nearby": "קרוב אליי",
+      "openNow": "פתוח עכשיו",
+      "highRating": "דירוג גבוה"
+    },
+    "checkIn": "צ'ק-אין",
+    "navigate": "נווט",
+    "favorite": "מועדף",
+    "rating": "דירוג",
+    "reviews": "ביקורות",
+    "occupancy": "תפוסה",
+    "distance": "מרחק",
+    "status": {
+      "public": "ציבורי",
+      "private": "פרטי",
+      "open": "פתוח",
+      "closed": "סגור"
+    },
+    "guestPrompt": "הירשם לצ'ק-אין ותכונות נוספות"
+  },
+  "social": {
+    "title": "חברתי",
+    "joinCommunity": "הצטרף לקהילה",
+    "joinDescription": "חבר לבעלי כלבים אחרים, שתף חוויות וצור חברויות חדשות",
+    "activeFriends": "חברים פעילים",
+    "recentChats": "צ'אטים אחרונים",
+    "community": "קהילה",
+    "sharePhoto": "שתף תמונה",
+    "sharePhotoDescription": "העלה תמונה של הכלב שלך",
+    "rateDogs": "דרג כלבים",
+    "rateDogsDescription": "דרג כלבים שפגשת בגן",
+    "dogJournal": "יומן כלבים",
+    "dogJournalDescription": "תעד מפגשים וחוויות",
+    "authRequired": "נדרשת הרשמה",
+    "authRequiredMessage": "כדי לגשת לתכונות החברתיות, אנא הירשם או התחבר לחשבון"
+  },
+  "events": {
+    "title": "אירועים",
+    "create": "צור אירוע",
+    "register": "הירשם",
+    "registered": "רשום",
+    "full": "האירוע מלא",
+    "organizedBy": "מאורגן ע\"י",
+    "participants": "משתתפים",
+    "filters": {
+      "upcoming": "קרובים",
+      "myEvents": "האירועים שלי",
+      "organizing": "מאורגן על ידי",
+      "past": "עבר"
+    },
+    "authRequired": "נדרשת הרשמה",
+    "authRequiredMessage": "כדי להירשם לאירועים, אנא הירשם או התחבר לחשבון",
+    "guestBanner": "הירשם כדי להשתתף באירועים",
+    "guestDescription": "צפה באירועים אך לא תוכל להירשם בלי חשבון"
+  },
+  "profile": {
+    "title": "פרופיל",
+    "guest": "אורח",
+    "guestDescription": "הירשם כדי לשמור את ההתקדמות שלך",
+    "joinCommunity": "הצטרף לקהילת PawPals",
+    "benefits": {
+      "points": "צבור נקודות והשג תגים",
+      "connect": "התחבר עם בעלי כלבים אחרים",
+      "events": "הירשם לאירועים",
+      "favorites": "שמור את הגנים המועדפים עליך"
+    },
+    "myDogs": "הכלבים שלי",
+    "addDog": "הוסף כלב",
+    "activity": "פעילות",
+    "myBadges": "התגים שלי",
+    "myStats": "הסטטיסטיקות שלי",
+    "visitHistory": "יומן הביקורים",
+    "settings": "הגדרות",
+    "darkMode": "מצב כהה",
+    "notifications": "התראות",
+    "language": "שפה",
+    "helpSupport": "עזרה ותמיכה",
+    "logout": "התנתק",
+    "logoutConfirm": "האם אתה בטוח שברצונך להתנתק?"
+  },
+  "errors": {
+    "networkError": "בעיית רשת - בדוק את החיבור לאינטרנט",
+    "serverError": "שגיאת שרת - נסה שוב מאוחר יותר",
+    "authError": "שגיאת אימות - התחבר מחדש",
+    "notFound": "לא נמצא",
+    "permissionDenied": "אין הרשאה",
+    "unknownError": "אירעה שגיאה לא צפויה"
+  }
+}

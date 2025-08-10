@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: dog-parks-app
+    env: node
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false  # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set this in Render dashboard
+    healthCheckPath: /api/health
+    autoDeploy: true
+    region: oregon
+    plan: free 

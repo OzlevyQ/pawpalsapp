@@ -1,0 +1,185 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "retry": "Try Again",
+    "refresh": "Refresh",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "welcome": "Welcome to PawPals",
+    "subtitle": "Social network for dog owners",
+    "description": "Find dog parks, connect with the community and create new friendships",
+    "login": "Sign in to existing account",
+    "register": "Create new account",
+    "continueAsGuest": "Continue as guest",
+    "guestDescription": "Browse parks without registration",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "phone": "Phone",
+    "forgotPassword": "Forgot password?",
+    "loginTitle": "Sign in to your account",
+    "loginSubtitle": "Welcome back! We're glad to see you again",
+    "registerTitle": "Create new account",
+    "registerSubtitle": "Join our community of dog owners",
+    "googleSignIn": "Continue with Google",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "loginNow": "Sign in now",
+    "registerNow": "Sign up now",
+    "termsAndConditions": "By registering you agree to our terms of service and privacy policy",
+    "loginSuccess": "Signed in successfully!",
+    "registerSuccess": "Registration completed!",
+    "registerSuccessMessage": "Your account has been created successfully",
+    "validationErrors": {
+      "required": "Required field",
+      "emailInvalid": "Invalid email address",
+      "passwordTooShort": "Password must contain at least 6 characters",
+      "passwordMismatch": "Passwords do not match",
+      "fillAllFields": "Please fill in all fields"
+    }
+  },
+  "navigation": {
+    "home": "Home",
+    "parks": "Parks",
+    "social": "Social",
+    "events": "Events",
+    "profile": "Profile"
+  },
+  "home": {
+    "greeting": "Hello",
+    "guestGreeting": "Hello guest!",
+    "subtitle": "How can we help you today?",
+    "guestSubtitle": "Discover dog parks around you",
+    "signUpPrompt": "Sign up now!",
+    "signUpDescription": "Get access to all features: park check-ins, friendships, events and more",
+    "dailyMissions": "Daily missions",
+    "quickActions": "Quick actions",
+    "recentActivity": "Recent activity",
+    "stats": {
+      "points": "Points",
+      "level": "Level",
+      "streak": "Streak"
+    },
+    "missions": {
+      "visitPark": "Visit a dog park",
+      "completed": "Completed"
+    },
+    "actions": {
+      "quickCheckin": "Quick check-in",
+      "scanQR": "Scan QR at park",
+      "nearbyParks": "Nearby parks",
+      "findParks": "Find parks nearby"
+    }
+  },
+  "parks": {
+    "title": "Dog Parks",
+    "searchPlaceholder": "Search dog parks...",
+    "filters": {
+      "all": "All",
+      "nearby": "Near me",
+      "openNow": "Open now",
+      "highRating": "High rating"
+    },
+    "checkIn": "Check in",
+    "navigate": "Navigate",
+    "favorite": "Favorite",
+    "rating": "Rating",
+    "reviews": "Reviews",
+    "occupancy": "Occupancy",
+    "distance": "Distance",
+    "status": {
+      "public": "Public",
+      "private": "Private",
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "guestPrompt": "Sign up for check-in and additional features"
+  },
+  "social": {
+    "title": "Social",
+    "joinCommunity": "Join the community",
+    "joinDescription": "Connect with other dog owners, share experiences and create new friendships",
+    "activeFriends": "Active friends",
+    "recentChats": "Recent chats",
+    "community": "Community",
+    "sharePhoto": "Share photo",
+    "sharePhotoDescription": "Upload a photo of your dog",
+    "rateDogs": "Rate dogs",
+    "rateDogsDescription": "Rate dogs you met at the park",
+    "dogJournal": "Dog journal",
+    "dogJournalDescription": "Record meetings and experiences",
+    "authRequired": "Registration required",
+    "authRequiredMessage": "To access social features, please sign up or sign in to your account"
+  },
+  "events": {
+    "title": "Events",
+    "create": "Create event",
+    "register": "Register",
+    "registered": "Registered",
+    "full": "Event is full",
+    "organizedBy": "Organized by",
+    "participants": "Participants",
+    "filters": {
+      "upcoming": "Upcoming",
+      "myEvents": "My events",
+      "organizing": "Organized by me",
+      "past": "Past"
+    },
+    "authRequired": "Registration required",
+    "authRequiredMessage": "To register for events, please sign up or sign in to your account",
+    "guestBanner": "Sign up to participate in events",
+    "guestDescription": "View events but cannot register without an account"
+  },
+  "profile": {
+    "title": "Profile",
+    "guest": "Guest",
+    "guestDescription": "Sign up to save your progress",
+    "joinCommunity": "Join PawPals community",
+    "benefits": {
+      "points": "Earn points and achieve badges",
+      "connect": "Connect with other dog owners",
+      "events": "Register for events",
+      "favorites": "Save your favorite parks"
+    },
+    "myDogs": "My dogs",
+    "addDog": "Add dog",
+    "activity": "Activity",
+    "myBadges": "My badges",
+    "myStats": "My statistics",
+    "visitHistory": "Visit history",
+    "settings": "Settings",
+    "darkMode": "Dark mode",
+    "notifications": "Notifications",
+    "language": "Language",
+    "helpSupport": "Help & support",
+    "logout": "Sign out",
+    "logoutConfirm": "Are you sure you want to sign out?"
+  },
+  "errors": {
+    "networkError": "Network error - check your internet connection",
+    "serverError": "Server error - try again later",
+    "authError": "Authentication error - please sign in again",
+    "notFound": "Not found",
+    "permissionDenied": "Permission denied",
+    "unknownError": "An unexpected error occurred"
+  }
+}
