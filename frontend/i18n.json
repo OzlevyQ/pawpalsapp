@@ -1,0 +1,15 @@
+{
+  "version": 1.5,
+  "provider": {
+    "id": "openai",
+    "model": "gpt-4o-mini"
+  },
+  "locale": {
+    "source": "en",
+    "targets": ["he"]
+  },
+  "files": {
+    "include": ["src/**/*.{js,jsx,ts,tsx}"],
+    "exclude": ["node_modules/**", "dist/**", "dev-dist/**"]
+  }
+}
