@@ -233,8 +233,13 @@ const gardenSchema = new mongoose.Schema({
   }
 });
 
-// Index for geospatial queries
-gardenSchema.index({ 'location.coordinates': '2dsphere' });
+// Performance indexes - CRITICAL for query speed
+gardenSchema.index({ 'location.coordinates': '2dsphere' }); // Geospatial queries for nearby gardens
+gardenSchema.index({ type: 1, isActive: 1 }); // Filter active public/private gardens
+gardenSchema.index({ 'statistics.averageRating': -1 }); // Sort by rating (highest first)
+gardenSchema.index({ isActive: 1, createdAt: -1 }); // Active gardens, newest first
+gardenSchema.index({ manager: 1 }); // Gardens by manager/owner
+gardenSchema.index({ type: 1 }); // Filter by garden type (public/private)
 
 // Update the updatedAt timestamp
 gardenSchema.pre('save', function(next) {

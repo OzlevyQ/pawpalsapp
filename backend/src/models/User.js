@@ -224,5 +224,7 @@ userSchema.index({ status: 1 }); // Active/inactive users
 userSchema.index({ role: 1, status: 1 }); // Compound index for admin user management  
 userSchema.index({ lastActive: -1 }); // Recent active users
 userSchema.index({ username: 1 }); // Username searches
+userSchema.index({ createdAt: -1 }); // Recent users (for admin/analytics)
+userSchema.index({ googleId: 1 }); // Google OAuth login lookup
 
 module.exports = mongoose.model('User', userSchema);

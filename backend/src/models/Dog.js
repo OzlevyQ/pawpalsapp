@@ -253,5 +253,8 @@ dogSchema.index({ owner: 1, isActive: 1 }); // Compound index for active dogs by
 dogSchema.index({ breed: 1 }); // Search by breed
 dogSchema.index({ size: 1 }); // Filter by size
 dogSchema.index({ isActive: 1, createdAt: -1 }); // Active dogs, newest first
+dogSchema.index({ 'ratings.average': -1, 'ratings.count': -1 }); // Top-rated dogs
+dogSchema.index({ 'popularity.friendsCount': -1 }); // Most popular dogs
+dogSchema.index({ age: 1 }); // Filter by age ranges
 
 module.exports = mongoose.model('Dog', dogSchema);

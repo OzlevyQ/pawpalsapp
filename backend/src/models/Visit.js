@@ -66,5 +66,7 @@ visitSchema.index({ garden: 1, status: 1 }); // Active visits by garden
 visitSchema.index({ user: 1, checkInTime: -1 }); // User's visits, newest first
 visitSchema.index({ status: 1 }); // Filter by status (active/completed)
 visitSchema.index({ checkInTime: -1 }); // Recent visits
+visitSchema.index({ user: 1, status: 1 }); // User's visits by status (active/completed)
+visitSchema.index({ status: 1, checkOutTime: 1 }); // Completed visits by checkout time
 
 module.exports = mongoose.model('Visit', visitSchema);
