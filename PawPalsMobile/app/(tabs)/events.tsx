@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   SafeAreaView,
   Alert,
   Dimensions,
   RefreshControl,
   ActivityIndicator,
+  ListRenderItem,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -117,24 +119,24 @@ export default function EventsScreen() {
 
     if (userRegistered || userPending || userOnWaitingList) {
       // User is already registered in some form - show appropriate cancel option
-      let alertTitle = isRTL ? 'ביטול הרשמה' : 'Cancel Registration';
-      let alertMessage = isRTL ? 'האם אתה בטוח שברצונך לבטל את ההרשמה לאירוע?' : 'Are you sure you want to cancel your registration?';
+      let alertTitle = t.events.cancelRegistration;
+      let alertMessage = t.events.cancelRegistrationConfirm;
       
       if (userPending) {
-        alertTitle = isRTL ? 'ביטול בקשת הרשמה' : 'Cancel Registration Request';
-        alertMessage = isRTL ? 'האם אתה בטוח שברצונך לבטל את בקשת ההרשמה? ההרשמה עדיין ממתינה לאישור המארגן.' : 'Are you sure you want to cancel your registration request? Your registration is still pending organizer approval.';
+        alertTitle = t.events.cancelRegistrationRequest;
+        alertMessage = t.events.cancelRegistrationRequestConfirm;
       } else if (userOnWaitingList) {
-        alertTitle = isRTL ? 'יציאה מרשימת המתנה' : 'Leave Waiting List';
-        alertMessage = isRTL ? 'האם אתה בטוח שברצונך לצאת מרשימת המתנה?' : 'Are you sure you want to leave the waiting list?';
+        alertTitle = t.events.leaveWaitingList;
+        alertMessage = t.events.leaveWaitingListConfirm;
       }
       
       Alert.alert(
         alertTitle,
         alertMessage,
         [
-          { text: t.cancel, style: 'cancel' },
+          { text: t.common.cancel, style: 'cancel' },
           {
-            text: isRTL ? 'בטל' : 'Cancel',
+            text: t.events.cancel,
             style: 'destructive',
             onPress: () => cancelEventRegistration(event._id)
           }
@@ -143,12 +145,12 @@ export default function EventsScreen() {
     } else if (userRejected) {
       // User was rejected - offer to register again
       Alert.alert(
-        isRTL ? 'הרשמה מחדש' : 'Register Again',
-        isRTL ? 'ההרשמה הקודמת שלך נדחתה. האם ברצונך לנסות להירשם שוב?' : 'Your previous registration was rejected. Would you like to try registering again?',
+        t.events.registerAgain,
+        t.events.registrationRejected,
         [
-          { text: t.cancel, style: 'cancel' },
+          { text: t.common.cancel, style: 'cancel' },
           {
-            text: isRTL ? 'הירשם שוב' : 'Register Again',
+            text: t.events.registerAgain,
             onPress: () => registerForEvent(event)
           }
         ]
@@ -411,7 +413,13 @@ export default function EventsScreen() {
     });
   };
 
-  const renderEventCard = (event: Event) => {
+  // Event item height estimation for FlatList optimization
+  const EVENT_CARD_HEIGHT = 480; // Complex card with detailed info
+  const EVENT_LIST_HEIGHT = 85;  // Simple list item
+  
+  const getItemHeight = () => viewType === 'cards' ? EVENT_CARD_HEIGHT : EVENT_LIST_HEIGHT;
+
+  const renderEventCard: ListRenderItem<Event> = useCallback(({ item: event }) => {
     if (!event || !event._id) return null;
     
     const isEventFull = event.maxParticipants ? event.participantCount >= event.maxParticipants : false;
@@ -442,7 +450,7 @@ export default function EventsScreen() {
     };
     
     return (
-      <View key={event._id}>
+      <View>
         <TouchableOpacity 
           onPress={() => router.push(`/event-details?eventId=${event._id}`)}
           style={{
@@ -888,16 +896,15 @@ export default function EventsScreen() {
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [theme, isRTL, t, router, handleEventRegistration, isUserRegistered, isUserPendingApproval, isUserRejected, isUserOnWaitingList, isGuest]);
 
-  const renderEventListItem = (event: Event) => {
+  const renderEventListItem: ListRenderItem<Event> = useCallback(({ item: event }) => {
     if (!event || !event._id) return null;
     
     const isEventFull = event.maxParticipants ? event.participantCount >= event.maxParticipants : false;
     
     return (
       <TouchableOpacity 
-        key={event._id}
         onPress={() => router.push(`/event-details?eventId=${event._id}`)}
         style={{
           backgroundColor: theme.background.card,
@@ -1008,7 +1015,22 @@ export default function EventsScreen() {
         />
       </TouchableOpacity>
     );
-  };
+  }, [theme, isRTL, t, router, handleEventRegistration, 
+    formatDate, isUserRegistered,
+    isUserPendingApproval, isUserRejected, isUserOnWaitingList]);
+
+  // FlatList key extractor
+  const keyExtractor = useCallback((item: Event) => item._id, []);
+
+  // FlatList getItemLayout for performance
+  const getItemLayout = useCallback(
+    (data: Event[] | null | undefined, index: number) => ({
+      length: getItemHeight(),
+      offset: getItemHeight() * index,
+      index,
+    }),
+    [viewType]
+  );
 
   const GuestView = () => (
     <View style={{
@@ -1133,7 +1155,7 @@ export default function EventsScreen() {
             color: theme.text.primary,
             textAlign: isRTL ? 'right' : 'left'
           }}>
-            {t.events}
+            {t.events.title}
           </Text>
           <View style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -1159,17 +1181,7 @@ export default function EventsScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        style={{ flex: 1 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.primary[500]]}
-            tintColor={theme.primary[500]}
-          />
-        }
-      >
+      <View style={{ flex: 1 }}>
         {/* Filter Tabs */}
         <View style={{
           backgroundColor: theme.background.primary,
@@ -1325,31 +1337,48 @@ export default function EventsScreen() {
               />
             )}
           </View>
-          {events.length === 0 ? (
-            <View style={{
-              padding: 32,
-              alignItems: 'center'
-            }}>
-              <Text style={{
-                color: theme.text.secondary,
-                fontSize: 16,
-                textAlign: 'center'
+          <FlatList
+            data={events.filter(event => event && event._id)}
+            renderItem={viewType === 'cards' ? renderEventCard : renderEventListItem}
+            keyExtractor={keyExtractor}
+            getItemLayout={getItemLayout}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.primary[500]]}
+                tintColor={theme.primary[500]}
+              />
+            }
+            // Performance optimizations
+            initialNumToRender={viewType === 'cards' ? 3 : 8}
+            maxToRenderPerBatch={viewType === 'cards' ? 5 : 10}
+            windowSize={10}
+            removeClippedSubviews={true}
+            onEndReachedThreshold={0.5}
+            ListEmptyComponent={
+              <View style={{
+                padding: 32,
+                alignItems: 'center'
               }}>
-                {activeFilter === 'my-events' 
-                  ? (isRTL ? 'אין אירועים שנרשמת אליהם' : 'No events you are registered for')
-                  : activeFilter === 'organized'
-                  ? (isRTL ? 'אין אירועים שארגנת' : 'No events you have organized')
-                  : (isRTL ? 'אין אירועים זמינים' : 'No events available')
-                }
-              </Text>
-            </View>
-          ) : (
-            viewType === 'cards' 
-              ? events.filter(event => event && event._id).map((event) => renderEventCard(event))
-              : events.filter(event => event && event._id).map((event) => renderEventListItem(event))
-          )}
+                <Text style={{
+                  color: theme.text.secondary,
+                  fontSize: 16,
+                  textAlign: 'center'
+                }}>
+                  {activeFilter === 'my-events' 
+                    ? (isRTL ? 'אין אירועים שנרשמת אליהם' : 'No events you are registered for')
+                    : activeFilter === 'organized'
+                    ? (isRTL ? 'אירועים שארגנת' : 'No events you have organized')
+                    : (isRTL ? 'אין אירועים זמינים' : 'No events available')
+                  }
+                </Text>
+              </View>
+            }
+          />
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 

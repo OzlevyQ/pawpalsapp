@@ -3,6 +3,28 @@ import * as FileSystem from 'expo-file-system';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+// Optimized field selections for common use cases
+export const OptimizedFields = {
+  // User profile fields
+  USER_PROFILE_BASIC: ['firstName', 'lastName', 'email', 'profileImage', 'gamification.points', 'gamification.level'],
+  USER_PROFILE_STATS: ['firstName', 'lastName', 'email', 'profileImage', 'gamification.points', 'gamification.level', 'gamification.currentStreak'],
+  
+  // Dog fields
+  DOG_LIST_BASIC: ['name', 'breed', 'age', 'image', 'owner'],
+  DOG_PROFILE_BASIC: ['name', 'breed', 'age', 'image', 'size', 'gender', 'description'],
+  DOG_PROFILE_DETAILED: ['name', 'breed', 'age', 'image', 'size', 'gender', 'description', 'personality', 'medicalInfo'],
+  
+  // Garden fields
+  GARDEN_LIST_BASIC: ['name', 'location.address', 'image', 'averageRating', 'currentOccupancy'],
+  GARDEN_DETAIL_BASIC: ['name', 'location.address', 'image', 'averageRating', 'currentOccupancy', 'maxDogs', 'amenities', 'type'],
+  GARDEN_NEARBY: ['name', 'location.address', 'image', 'averageRating', 'currentOccupancy', 'location.coordinates'],
+  
+  // Visit fields
+  VISIT_LIST_BASIC: ['checkInTime', 'checkOutTime', 'garden', 'dogs', 'status', 'duration'],
+  VISIT_ACTIVE: ['checkInTime', 'garden', 'dogs', 'status', 'notes'],
+  VISIT_HISTORY: ['checkInTime', 'checkOutTime', 'garden', 'dogs', 'status', 'duration', 'createdAt'],
+} as const;
+
 // Helper function to convert image to base64
 const convertImageToBase64 = async (imageUri: string): Promise<string> => {
   try {
@@ -219,6 +241,42 @@ export interface GamificationActivity {
   createdAt: string;
 }
 
+export interface Mission {
+  _id: string;
+  title: string;
+  description: string;
+  type: 'daily' | 'weekly' | 'monthly' | 'special';
+  targetValue: number;
+  pointsReward: number;
+  badgeReward?: string;
+  specialReward?: any;
+  requirements?: string[];
+  icon: string;
+  isActive: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  createdAt: string;
+}
+
+export interface UserMission {
+  _id: string;
+  user: string | User;
+  mission: string | Mission;
+  currentProgress: number;
+  isCompleted: boolean;
+  completedAt?: string;
+  rewardsClaimed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MissionProgress {
+  mission: Mission;
+  userMission: UserMission | null;
+  progressPercentage: number;
+  canComplete: boolean;
+}
+
 export interface Achievement {
   _id: string;
   name: string;
@@ -399,7 +457,7 @@ class ApiClient {
         // Handle null/undefined data properly
         responseData = data.data as T;
       } else {
-        // For endpoints that return the data directly
+        // For endpoints that return the data directly (like visits with total + visits)
         responseData = data as T;
       }
 
@@ -544,8 +602,11 @@ export const apiClient = new ApiClient(API_BASE_URL);
 
 // User API endpoints
 export const userApi = {
-  // Get current user profile
-  getCurrentUser: () => apiClient.get<User>('/users/profile'),
+  // Get current user profile with optional field selection
+  getCurrentUser: (fields?: string[]) => {
+    const queryParams = fields ? `?fields=${fields.join(',')}` : '';
+    return apiClient.get<User>(`/users/profile${queryParams}`);
+  },
   
   // Update user profile
   updateProfile: (data: Partial<User>) => 
@@ -592,14 +653,23 @@ export const userApi = {
 
 // Dogs API endpoints  
 export const dogsApi = {
-  // Get user's dogs
-  getUserDogs: () => apiClient.get<Dog[]>('/dogs'),
+  // Get user's dogs with optional field selection
+  getUserDogs: (fields?: string[]) => {
+    const queryParams = fields ? `?fields=${fields.join(',')}` : '';
+    return apiClient.get<Dog[]>(`/dogs${queryParams}`);
+  },
   
-  // Get specific dog by ID
-  getDogById: (dogId: string) => apiClient.get<Dog>(`/dogs/${dogId}`),
+  // Get specific dog by ID with optional field selection
+  getDogById: (dogId: string, fields?: string[]) => {
+    const queryParams = fields ? `?fields=${fields.join(',')}` : '';
+    return apiClient.get<Dog>(`/dogs/${dogId}${queryParams}`);
+  },
   
-  // Get dog public profile
-  getDogPublicProfile: (dogId: string) => apiClient.get<Dog>(`/dogs/profile/${dogId}`),
+  // Get dog public profile with optional field selection
+  getDogPublicProfile: (dogId: string, fields?: string[]) => {
+    const queryParams = fields ? `?fields=${fields.join(',')}` : '';
+    return apiClient.get<Dog>(`/dogs/profile/${dogId}${queryParams}`);
+  },
   
   // Add new dog
   addDog: (dog: Partial<Dog>) => 
@@ -638,32 +708,28 @@ export const dogsApi = {
     }
   },
 
-  // Update dog (for editing)
-  updateDog: async (dogId: string, updates: Partial<Dog>): Promise<ApiResponse<Dog>> => {
-    return apiClient.put<Dog>(`/dogs/${dogId}`, updates);
-  },
 };
 
 // Visits API endpoints
 export const visitsApi = {
-  // Get user's visit history
-  getMyVisits: (params?: { status?: string; garden?: string; dog?: string; page?: number; limit?: number }) => {
+  // Get user's visit history with optional field selection
+  getMyVisits: (params?: { status?: string; garden?: string; dog?: string; page?: number; limit?: number; fields?: string[] }) => {
     const queryParams = new URLSearchParams();
     if (params?.status) queryParams.append('status', params.status);
     if (params?.garden) queryParams.append('garden', params.garden);
     if (params?.dog) queryParams.append('dog', params.dog);
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.fields) queryParams.append('fields', params.fields.join(','));
     
     const queryString = queryParams.toString();
-    return apiClient.get<Visit[]>(`/visits/my-visits${queryString ? `?${queryString}` : ''}`);
+    return apiClient.get<{ total: number; visits: Visit[] }>(`/visits/my-visits${queryString ? `?${queryString}` : ''}`);
   },
 
-  // Get current active visit
-  getActiveVisit: async (): Promise<ApiResponse<Visit | null>> => {
-    console.log('Getting active visit from API...');
-    const result = await apiClient.get<Visit | null>('/visits/active');
-    console.log('Active visit API response:', result);
+  // Get current active visit with optional field selection
+  getActiveVisit: async (fields?: string[]): Promise<ApiResponse<Visit | null>> => {
+    const queryParams = fields ? `?fields=${fields.join(',')}` : '';
+    const result = await apiClient.get<Visit | null>(`/visits/active${queryParams}`);
     return result;
   },
 
@@ -770,7 +836,7 @@ export const friendshipApi = {
   getSentRequests: () => apiClient.get<FriendRequest[]>('/friendships/requests/sent'),
 
   // Search friends
-  searchFriends: (query: string) => apiClient.get<Friend[]>('/friendships/search', { params: { q: query } }),
+  searchFriends: (query: string) => apiClient.get<Friend[]>(`/friendships/search?q=${encodeURIComponent(query)}`),
 };
 
 // Authentication API endpoints
@@ -1027,13 +1093,14 @@ export const notificationsApi = {
 
 // Gardens API endpoints
 export const gardensApi = {
-  // Get all gardens
+  // Get all gardens with optional field selection
   getAllGardens: (params?: {
     type?: 'public' | 'private';
     isOpen?: boolean;
     minRating?: number;
     limit?: number;
     skip?: number;
+    fields?: string[];
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.type) queryParams.append('type', params.type);
@@ -1041,14 +1108,17 @@ export const gardensApi = {
     if (params?.minRating) queryParams.append('minRating', params.minRating.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.fields) queryParams.append('fields', params.fields.join(','));
     
     const queryString = queryParams.toString();
     return apiClient.get<{ total: number; gardens: Garden[] }>(`/gardens${queryString ? `?${queryString}` : ''}`);
   },
   
-  // Get specific garden by ID
-  getGardenById: (gardenId: string) =>
-    apiClient.get<{ message: string; data: Garden }>(`/gardens/${gardenId}`),
+  // Get specific garden by ID with optional field selection
+  getGardenById: (gardenId: string, fields?: string[]) => {
+    const queryParams = fields ? `?fields=${fields.join(',')}` : '';
+    return apiClient.get<{ message: string; data: Garden }>(`/gardens/${gardenId}${queryParams}`);
+  },
   
   // Search gardens
   searchGardens: (query: string, params?: {
@@ -1070,12 +1140,13 @@ export const gardensApi = {
     return apiClient.get<{ total: number; gardens: Garden[] }>(`/gardens/search?${queryParams.toString()}`);
   },
   
-  // Get nearby gardens
-  getNearbyGardens: (latitude: number, longitude: number, radius = 10) => {
+  // Get nearby gardens with optional field selection
+  getNearbyGardens: (latitude: number, longitude: number, radius = 10, fields?: string[]) => {
     const queryParams = new URLSearchParams();
     queryParams.append('lat', latitude.toString());
     queryParams.append('lng', longitude.toString());
     queryParams.append('radius', radius.toString());
+    if (fields) queryParams.append('fields', fields.join(','));
     
     return apiClient.get<{ total: number; gardens: Garden[] }>(`/gardens/nearby?${queryParams.toString()}`);
   },
@@ -1107,4 +1178,47 @@ export const gardensApi = {
     description: string;
     photos?: string[];
   }) => apiClient.post(`/gardens/${gardenId}/report`, issue),
+};
+
+// Missions API
+export const missionsApi = {
+  // Get daily missions
+  getDailyMissions: () => 
+    apiClient.get<Mission[]>('/missions/daily'),
+  
+  // Get all available missions
+  getAvailableMissions: (type?: 'daily' | 'weekly' | 'monthly' | 'special') => {
+    const queryParams = new URLSearchParams();
+    if (type) queryParams.append('type', type);
+    const queryString = queryParams.toString();
+    return apiClient.get<Mission[]>(`/missions/available${queryString ? `?${queryString}` : ''}`);
+  },
+  
+  // Get user's mission progress
+  getMyProgress: () => 
+    apiClient.get<UserMission[]>('/missions/my-progress'),
+  
+  // Get mission progress with details
+  getMissionProgressDetails: () =>
+    apiClient.get<MissionProgress[]>('/missions/my-progress?details=true'),
+  
+  // Update mission progress
+  updateProgress: (missionId: string, progress: number) =>
+    apiClient.post(`/missions/${missionId}/progress`, { progress }),
+  
+  // Complete a mission
+  completeMission: (missionId: string) =>
+    apiClient.post(`/missions/${missionId}/complete`),
+  
+  // Get mission statistics
+  getStats: () =>
+    apiClient.get<{
+      totalCompleted: number;
+      dailyCompleted: number;
+      weeklyCompleted: number;
+      monthlyCompleted: number;
+      totalPoints: number;
+      currentStreak: number;
+      completionRate: number;
+    }>('/missions/stats'),
 };

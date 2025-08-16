@@ -5,17 +5,18 @@ import {
   ScrollView,
   Modal,
   TouchableOpacity,
-  Image,
   Dimensions,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Dog } from '../services/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import OptimizedImage, { preloadImages } from './OptimizedImage';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface DogProfileModalProps {
   visible: boolean;
@@ -30,7 +31,7 @@ const DogProfileModal: React.FC<DogProfileModalProps> = ({ visible, onClose, dog
   const { theme } = useTheme();
   const { isRTL } = useLanguage();
 
-  // Aggregate images and manage selected image (simple, on-brand)
+  // Aggregate images and manage selected image
   const images = useMemo(() => {
     const list: string[] = [];
     if (dog?.image) list.push(dog.image);
@@ -39,6 +40,13 @@ const DogProfileModal: React.FC<DogProfileModalProps> = ({ visible, onClose, dog
     return Array.from(new Set(list));
   }, [dog]);
   const [selectedImage, setSelectedImage] = useState<string | undefined>(images[0]);
+
+  // Preload dog images when modal becomes visible
+  React.useEffect(() => {
+    if (visible && images.length > 0) {
+      preloadImages(images);
+    }
+  }, [visible, images]);
 
   if (!dog) return null;
 
@@ -65,9 +73,10 @@ const DogProfileModal: React.FC<DogProfileModalProps> = ({ visible, onClose, dog
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background.primary} />
       <View style={{ flex: 1, backgroundColor: theme.background.primary }}>
         {loading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -75,185 +84,373 @@ const DogProfileModal: React.FC<DogProfileModalProps> = ({ visible, onClose, dog
           </View>
         ) : (
           <>
-            {/* Header */}
-            <LinearGradient
-              colors={[theme.primary[500], theme.primary[600]]}
-              style={{ paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20 }}
-            >
-              <View style={{
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-                <Text style={{ color: theme.text.inverse, fontSize: 24, fontWeight: 'bold', flex: 1 }}>
-                  {dog.name}
-                </Text>
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 16 }}>
-                  {isOwner && onEdit && (
-                    <TouchableOpacity onPress={() => onEdit(dog)}>
-                      <Ionicons name="pencil" size={24} color={theme.text.inverse} />
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={onClose}>
-                    <Ionicons name="close" size={28} color={theme.text.inverse} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </LinearGradient>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Dog Image */}
-              <View style={{ alignItems: 'center', marginTop: -40 }}>
-                <View style={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: 60,
-                  backgroundColor: theme.background.card,
+            {/* Clean Header */}
+            <View style={{ 
+              paddingTop: 60, 
+              paddingHorizontal: 24, 
+              paddingBottom: 20,
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: theme.background.primary,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.border.light,
+            }}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: theme.background.surface,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  borderWidth: 4,
-                  borderColor: theme.background.primary,
-                  shadowColor: theme.shadow.dark,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 5,
+                }}
+              >
+                <Ionicons name="close" size={20} color={theme.text.primary} />
+              </TouchableOpacity>
+
+              <Text style={{ 
+                fontSize: 18, 
+                fontWeight: '600', 
+                color: theme.text.primary,
+                flex: 1,
+                textAlign: 'center',
+                marginHorizontal: 16
+              }}>
+                {dog.name}
+              </Text>
+
+              {isOwner && onEdit && (
+                <TouchableOpacity
+                  onPress={() => onEdit(dog)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: theme.primary[500],
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="pencil" size={16} color={theme.text.inverse} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              {/* Hero Section */}
+              <View style={{ 
+                alignItems: 'center', 
+                paddingVertical: 40,
+                backgroundColor: theme.background.primary
+              }}>
+                {/* Profile Image */}
+                <View style={{ 
+                  width: 120, 
+                  height: 120, 
+                  borderRadius: 60,
+                  backgroundColor: theme.background.surface,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 24,
+                  shadowColor: theme.shadow.medium,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 12,
+                  elevation: 8,
                 }}>
                   {selectedImage ? (
-                    <Image source={{ uri: selectedImage }} style={{ width: 112, height: 112, borderRadius: 56 }} />
+                    <OptimizedImage
+                      uri={selectedImage}
+                      width={120}
+                      height={120}
+                      borderRadius={60}
+                      priority="high"
+                      cacheKey={`dog-profile-${dog._id}`}
+                      fallbackIcon="paw"
+                    />
                   ) : (
-                    <Text style={{ fontSize: 48 }}>🐕</Text>
+                    <Text style={{ fontSize: 48, textAlign: 'center' }}>🐕</Text>
                   )}
                 </View>
 
-                {/* Popularity Badge */}
-                {dog.popularity && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: getPopularityColor(dog.popularity.status), paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 8 }}>
-                    <Ionicons name="sparkles" size={14} color="#fff" />
-                    <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
-                      {dog.popularity.status.replace('-', ' ').toUpperCase()}
-                    </Text>
+                {/* Dog Details */}
+                <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
+                  <Text style={{ 
+                    fontSize: 24, 
+                    fontWeight: '700', 
+                    color: theme.text.primary,
+                    marginBottom: 8,
+                  }}>
+                    {dog.name}
+                  </Text>
+                  
+                  <Text style={{ 
+                    fontSize: 16, 
+                    color: theme.text.secondary,
+                    marginBottom: 16,
+                  }}>
+                    {dog.breed} • {dog.age} {isRTL ? 'שנים' : 'years'}
+                  </Text>
+
+                  {/* Popularity Badge */}
+                  {dog.popularity && (
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      gap: 6, 
+                      backgroundColor: getPopularityColor(dog.popularity.status) + '20',
+                      paddingHorizontal: 12, 
+                      paddingVertical: 6, 
+                      borderRadius: 16,
+                      marginBottom: 20
+                    }}>
+                      <Ionicons name="sparkles" size={14} color={getPopularityColor(dog.popularity.status)} />
+                      <Text style={{ 
+                        color: getPopularityColor(dog.popularity.status), 
+                        fontWeight: '600', 
+                        fontSize: 12 
+                      }}>
+                        {dog.popularity.status.replace('-', ' ').toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Stats Row */}
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    justifyContent: 'space-around', 
+                    width: '100%',
+                    paddingVertical: 20,
+                    backgroundColor: theme.background.surface,
+                    borderRadius: 16,
+                    marginBottom: 20
+                  }}>
+                    <StatItem 
+                      value={dog.totalVisits || 0} 
+                      label={isRTL ? 'ביקורים' : 'Visits'} 
+                      theme={theme} 
+                    />
+                    <View style={{ width: 1, backgroundColor: theme.border.light, height: 40 }} />
+                    <StatItem 
+                      value={dog.friendsCount || 0} 
+                      label={isRTL ? 'חברים' : 'Friends'} 
+                      theme={theme} 
+                    />
+                    <View style={{ width: 1, backgroundColor: theme.border.light, height: 40 }} />
+                    <StatItem 
+                      value={dog.photosCount || 0} 
+                      label={isRTL ? 'תמונות' : 'Photos'} 
+                      theme={theme} 
+                    />
                   </View>
-                )}
+                </View>
               </View>
 
-              {/* Thumbnails (subtle) */}
+              {/* Image Gallery */}
               {images.length > 1 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
-                    {images.map((uri) => (
-                      <TouchableOpacity key={uri} onPress={() => setSelectedImage(uri)}>
-                        <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: selectedImage === uri ? 2 : 1, borderColor: selectedImage === uri ? theme.primary[500] : theme.border.light }}>
-                          <Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              )}
-
-              {/* Basic Info */}
-              <SectionCard icon="information-circle" title={isRTL ? 'מידע בסיסי' : 'Basic Information'} theme={theme} isRTL={isRTL}>
-                <View style={{ gap: 8 }}>
-                  <InfoRow icon="paw" label={isRTL ? 'גזע' : 'Breed'} value={dog.breed} theme={theme} isRTL={isRTL} />
-                  <InfoRow icon="calendar" label={isRTL ? 'גיל' : 'Age'} value={`${dog.age} ${isRTL ? 'שנים' : 'years'}`} theme={theme} isRTL={isRTL} />
-                  <InfoRow icon="resize" label={isRTL ? 'גודל' : 'Size'} value={getSizeText(dog.size)} theme={theme} isRTL={isRTL} />
-                  {dog.weight && (
-                    <InfoRow icon="barbell" label={isRTL ? 'משקל' : 'Weight'} value={`${dog.weight} ${isRTL ? 'ק"ג' : 'kg'}`} theme={theme} isRTL={isRTL} />
-                  )}
-                  <InfoRow icon={dog.gender === 'male' ? 'male' : 'female'} label={isRTL ? 'מין' : 'Gender'} value={dog.gender === 'male' ? (isRTL ? 'זכר' : 'Male') : (isRTL ? 'נקבה' : 'Female')} theme={theme} isRTL={isRTL} />
-                </View>
-              </SectionCard>
-
-              {/* Description */}
-              {dog.description && (
-                <SectionCard icon="document-text" title={isRTL ? 'תיאור' : 'Description'} theme={theme} isRTL={isRTL}>
-                  <Text style={{ fontSize: 14, color: theme.text.secondary, lineHeight: 20, textAlign: isRTL ? 'right' : 'left' }}>
-                    {dog.description}
+                <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+                  <Text style={{ 
+                    fontSize: 18, 
+                    fontWeight: '600', 
+                    color: theme.text.primary,
+                    marginBottom: 16,
+                    textAlign: isRTL ? 'right' : 'left'
+                  }}>
+                    {isRTL ? 'תמונות' : 'Photos'}
                   </Text>
-                </SectionCard>
-              )}
-
-              {/* Personality Traits */}
-              {dog.personality && (
-                <SectionCard icon="happy" title={isRTL ? 'אישיות' : 'Personality'} theme={theme} isRTL={isRTL}>
-                  <PersonalityTrait label={isRTL ? 'חברותי' : 'Friendly'} value={dog.personality.friendly} icon="heart" color="#FF6B6B" theme={theme} isRTL={isRTL} />
-                  <PersonalityTrait label={isRTL ? 'אנרגטי' : 'Energetic'} value={dog.personality.energetic} icon="flash" color="#FFD93D" theme={theme} isRTL={isRTL} />
-                  <PersonalityTrait label={isRTL ? 'חברתי' : 'Social'} value={dog.personality.social} icon="people" color="#6BCF7F" theme={theme} isRTL={isRTL} />
-                  <PersonalityTrait label={isRTL ? 'תוקפני' : 'Aggressive'} value={dog.personality.aggressive} icon="warning" color="#FF4757" theme={theme} isRTL={isRTL} />
-                </SectionCard>
-              )}
-
-              {/* Ratings */}
-              {dog.ratings && dog.ratings.count > 0 && (
-                <SectionCard icon="star" title={isRTL ? 'דירוגים' : 'Ratings'} theme={theme} isRTL={isRTL}>
-                  <View style={{ alignItems: 'center', marginBottom: 16 }}>
-                    <Text style={{ fontSize: 36, fontWeight: 'bold', color: theme.primary[500] }}>
-                      {dog.ratings.average.toFixed(1)}
-                    </Text>
-                    <View style={{ flexDirection: 'row', marginVertical: 4 }}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Ionicons key={star} name={star <= Math.round(dog.ratings.average) ? 'star' : 'star-outline'} size={20} color="#FFD700" />
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12 }}>
+                      {images.map((uri) => (
+                        <TouchableOpacity key={uri} onPress={() => setSelectedImage(uri)}>
+                          <View style={{ 
+                            width: 80, 
+                            height: 80, 
+                            borderRadius: 12, 
+                            overflow: 'hidden',
+                            borderWidth: selectedImage === uri ? 2 : 0,
+                            borderColor: theme.primary[500],
+                          }}>
+                            <OptimizedImage
+                              uri={uri}
+                              width={80}
+                              height={80}
+                              borderRadius={12}
+                              priority="normal"
+                              cacheKey={`dog-thumb-${dog._id}`}
+                              fallbackIcon="image"
+                            />
+                          </View>
+                        </TouchableOpacity>
                       ))}
                     </View>
-                    <Text style={{ fontSize: 12, color: theme.text.secondary }}>
-                      {dog.ratings.count} {isRTL ? 'דירוגים' : 'ratings'}
-                    </Text>
-                  </View>
-
-                  <View style={{ gap: 8 }}>
-                    <RatingBar label={isRTL ? 'ידידותיות' : 'Friendliness'} value={dog.ratings.breakdown.friendliness} theme={theme} isRTL={isRTL} />
-                    <RatingBar label={isRTL ? 'משחקיות' : 'Playfulness'} value={dog.ratings.breakdown.playfulness} theme={theme} isRTL={isRTL} />
-                    <RatingBar label={isRTL ? 'ציות' : 'Obedience'} value={dog.ratings.breakdown.obedience} theme={theme} isRTL={isRTL} />
-                    <RatingBar label={isRTL ? 'אנרגיה' : 'Energy'} value={dog.ratings.breakdown.energy} theme={theme} isRTL={isRTL} />
-                  </View>
-                </SectionCard>
+                  </ScrollView>
+                </View>
               )}
 
-              {/* Social Stats */}
-              {dog.socialStats && (
-                <SectionCard icon="stats-chart" title={isRTL ? 'סטטיסטיקות חברתיות' : 'Social Stats'} theme={theme} isRTL={isRTL}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-                    <StatCard icon="calendar-outline" value={dog.totalVisits || dog.socialStats.totalMeetings} label={isRTL ? 'ביקורים' : 'Visits'} theme={theme} />
-                    <StatCard icon="people-outline" value={dog.socialStats.totalPlaymates} label={isRTL ? 'חברים למשחק' : 'Playmates'} theme={theme} />
-                    <StatCard icon="camera-outline" value={dog.photosCount || 0} label={isRTL ? 'תמונות' : 'Photos'} theme={theme} />
-                  </View>
-                </SectionCard>
-              )}
+              {/* Content Sections */}
+              <View style={{ paddingHorizontal: 24, gap: 24 }}>
 
-              {/* Medical Info */}
-              {dog.medicalInfo && (
-                <SectionCard icon="medkit" title={isRTL ? 'מידע רפואי' : 'Medical Info'} theme={theme} isRTL={isRTL}>
-                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name={dog.medicalInfo.vaccinated ? 'checkmark-circle' : 'close-circle'} size={24} color={dog.medicalInfo.vaccinated ? '#10B981' : '#EF4444'} />
-                    <Text style={{ color: theme.text.primary }}>
-                      {dog.medicalInfo.vaccinated ? (isRTL ? 'מחוסן' : 'Vaccinated') : (isRTL ? 'לא מחוסן' : 'Not Vaccinated')}
-                    </Text>
+                {/* Basic Info */}
+                <InfoSection title={isRTL ? 'מידע בסיסי' : 'About'} theme={theme} isRTL={isRTL}>
+                  <View style={{ 
+                    backgroundColor: theme.background.surface,
+                    borderRadius: 12,
+                    padding: 12,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between'
+                  }}>
+                    <InfoRow icon="paw" label={isRTL ? 'גזע' : 'Breed'} value={dog.breed || (isRTL ? 'לא צוין' : 'Not specified')} theme={theme} isRTL={isRTL} />
+                    <InfoRow icon="calendar" label={isRTL ? 'גיל' : 'Age'} value={`${dog.age || 0} ${isRTL ? 'שנים' : 'years'}`} theme={theme} isRTL={isRTL} />
+                    {dog.size && (
+                      <InfoRow icon="resize" label={isRTL ? 'גודל' : 'Size'} value={getSizeText(dog.size)} theme={theme} isRTL={isRTL} />
+                    )}
+                    {dog.weight && (
+                      <InfoRow icon="barbell" label={isRTL ? 'משקל' : 'Weight'} value={`${dog.weight} ${isRTL ? 'ק"ג' : 'kg'}`} theme={theme} isRTL={isRTL} />
+                    )}
+                    {dog.gender && (
+                      <InfoRow icon={dog.gender === 'male' ? 'male' : 'female'} label={isRTL ? 'מין' : 'Gender'} value={dog.gender === 'male' ? (isRTL ? 'זכר' : 'Male') : (isRTL ? 'נקבה' : 'Female')} theme={theme} isRTL={isRTL} />
+                    )}
+                    <InfoRow icon="shield-checkmark" label={isRTL ? 'סטטוס' : 'Status'} value={dog.isActive ? (isRTL ? 'פעיל' : 'Active') : (isRTL ? 'לא פעיל' : 'Inactive')} theme={theme} isRTL={isRTL} />
                   </View>
-                  {Array.isArray(dog.medicalInfo.healthIssues) && dog.medicalInfo.healthIssues.length > 0 && (
-                    <View style={{ marginTop: 10 }}>
-                      <Text style={{ color: theme.text.secondary, marginBottom: 6, fontWeight: '600' }}>{isRTL ? 'בעיות בריאות' : 'Health Issues'}</Text>
-                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {dog.medicalInfo.healthIssues.map((issue, idx) => (
-                          <Tag key={`issue-${idx}`} icon="alert" label={issue} theme={theme} />
+                </InfoSection>
+
+                {/* Description */}
+                {dog.description && (
+                  <InfoSection title={isRTL ? 'תיאור' : 'Description'} theme={theme} isRTL={isRTL}>
+                    <Text style={{ 
+                      fontSize: 15, 
+                      color: theme.text.secondary, 
+                      lineHeight: 22, 
+                      textAlign: isRTL ? 'right' : 'left' 
+                    }}>
+                      {dog.description}
+                    </Text>
+                  </InfoSection>
+                )}
+
+                {/* Personality */}
+                {dog.personality && (
+                  <InfoSection title={isRTL ? 'אישיות' : 'Personality'} theme={theme} isRTL={isRTL}>
+                    <View style={{ gap: 16 }}>
+                      <PersonalityTrait label={isRTL ? 'חברותי' : 'Friendly'} value={dog.personality.friendly} color="#4ADE80" theme={theme} isRTL={isRTL} />
+                      <PersonalityTrait label={isRTL ? 'אנרגטי' : 'Energetic'} value={dog.personality.energetic} color="#F59E0B" theme={theme} isRTL={isRTL} />
+                      <PersonalityTrait label={isRTL ? 'חברתי' : 'Social'} value={dog.personality.social} color="#3B82F6" theme={theme} isRTL={isRTL} />
+                      <PersonalityTrait label={isRTL ? 'תוקפני' : 'Aggressive'} value={dog.personality.aggressive} color="#EF4444" theme={theme} isRTL={isRTL} />
+                    </View>
+                  </InfoSection>
+                )}
+
+                {/* Ratings */}
+                {dog.ratings && dog.ratings.count > 0 && (
+                  <InfoSection title={isRTL ? 'דירוגים' : 'Ratings'} theme={theme} isRTL={isRTL}>
+                    <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                      <Text style={{ 
+                        fontSize: 32, 
+                        fontWeight: '700', 
+                        color: theme.primary[500],
+                        marginBottom: 8
+                      }}>
+                        {dog.ratings.average.toFixed(1)}
+                      </Text>
+                      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons 
+                            key={star} 
+                            name={star <= Math.round(dog.ratings.average) ? 'star' : 'star-outline'} 
+                            size={20} 
+                            color="#F59E0B" 
+                          />
                         ))}
                       </View>
+                      <Text style={{ 
+                        fontSize: 14, 
+                        color: theme.text.secondary 
+                      }}>
+                        {dog.ratings.count} {isRTL ? 'דירוגים' : 'ratings'}
+                      </Text>
                     </View>
-                  )}
-                  {Array.isArray(dog.medicalInfo.medications) && dog.medicalInfo.medications.length > 0 && (
-                    <View style={{ marginTop: 10 }}>
-                      <Text style={{ color: theme.text.secondary, marginBottom: 6, fontWeight: '600' }}>{isRTL ? 'תרופות' : 'Medications'}</Text>
-                      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {dog.medicalInfo.medications.map((med, idx) => (
-                          <Tag key={`med-${idx}`} icon="medical" label={med} theme={theme} />
-                        ))}
-                      </View>
+                    
+                    <View style={{ gap: 12 }}>
+                      <RatingBar label={isRTL ? 'ידידותיות' : 'Friendliness'} value={dog.ratings.breakdown.friendliness} theme={theme} isRTL={isRTL} />
+                      <RatingBar label={isRTL ? 'משחקיות' : 'Playfulness'} value={dog.ratings.breakdown.playfulness} theme={theme} isRTL={isRTL} />
+                      <RatingBar label={isRTL ? 'ציות' : 'Obedience'} value={dog.ratings.breakdown.obedience} theme={theme} isRTL={isRTL} />
+                      <RatingBar label={isRTL ? 'אנרגיה' : 'Energy'} value={dog.ratings.breakdown.energy} theme={theme} isRTL={isRTL} />
                     </View>
-                  )}
-                </SectionCard>
-              )}
+                  </InfoSection>
+                )}
 
-              <View style={{ height: 16 }} />
+                {/* Medical Info */}
+                {dog.medicalInfo && (
+                  <InfoSection title={isRTL ? 'מידע רפואי' : 'Medical Info'} theme={theme} isRTL={isRTL}>
+                    <View style={{ 
+                      flexDirection: isRTL ? 'row-reverse' : 'row', 
+                      alignItems: 'center', 
+                      gap: 12, 
+                      marginBottom: 16,
+                      padding: 16,
+                      backgroundColor: dog.medicalInfo.vaccinated ? theme.primary[50] : '#FEF2F2',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: dog.medicalInfo.vaccinated ? theme.primary[200] : '#FECACA'
+                    }}>
+                      <Ionicons 
+                        name={dog.medicalInfo.vaccinated ? 'checkmark-circle' : 'close-circle'} 
+                        size={24} 
+                        color={dog.medicalInfo.vaccinated ? theme.primary[500] : '#EF4444'} 
+                      />
+                      <Text style={{ 
+                        color: dog.medicalInfo.vaccinated ? theme.primary[700] : '#DC2626', 
+                        fontSize: 16, 
+                        fontWeight: '600' 
+                      }}>
+                        {dog.medicalInfo.vaccinated ? (isRTL ? 'מחוסן' : 'Vaccinated') : (isRTL ? 'לא מחוסן' : 'Not Vaccinated')}
+                      </Text>
+                    </View>
+
+                    {Array.isArray(dog.medicalInfo.healthIssues) && dog.medicalInfo.healthIssues.length > 0 && (
+                      <View style={{ marginBottom: 16 }}>
+                        <Text style={{ 
+                          color: theme.text.secondary, 
+                          marginBottom: 8, 
+                          fontWeight: '600',
+                          fontSize: 14
+                        }}>
+                          {isRTL ? 'בעיות בריאות' : 'Health Issues'}
+                        </Text>
+                        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>
+                          {dog.medicalInfo.healthIssues.map((issue, idx) => (
+                            <MedicalTag key={`issue-${idx}`} label={issue} type="warning" theme={theme} />
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {Array.isArray(dog.medicalInfo.medications) && dog.medicalInfo.medications.length > 0 && (
+                      <View>
+                        <Text style={{ 
+                          color: theme.text.secondary, 
+                          marginBottom: 8, 
+                          fontWeight: '600',
+                          fontSize: 14
+                        }}>
+                          {isRTL ? 'תרופות' : 'Medications'}
+                        </Text>
+                        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>
+                          {dog.medicalInfo.medications.map((med, idx) => (
+                            <MedicalTag key={`med-${idx}`} label={med} type="medication" theme={theme} />
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </InfoSection>
+                )}
+
+              </View>
+
+              <View style={{ height: 40 }} />
             </ScrollView>
           </>
         )}
@@ -263,125 +460,167 @@ const DogProfileModal: React.FC<DogProfileModalProps> = ({ visible, onClose, dog
 };
 
 // Helper Components
-interface SectionCardProps { icon?: any; title: string; children: React.ReactNode; theme: any; isRTL: boolean }
-const SectionCard: React.FC<SectionCardProps> = ({ icon, title, children, theme, isRTL }) => (
-  <View style={{ backgroundColor: theme.background.card, marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 14 }}>
-    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 12 }}>
-      {icon && (
-        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.background.surface, justifyContent: 'center', alignItems: 'center', marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>
-          <Ionicons name={icon} size={16} color={theme.text.muted} />
-        </View>
-      )}
-      <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text.primary, textAlign: isRTL ? 'right' : 'left', flex: 1 }}>
-        {title}
-      </Text>
-    </View>
+const StatItem: React.FC<{ value: number | string; label: string; theme: any }> = ({ value, label, theme }) => (
+  <View style={{ alignItems: 'center', flex: 1 }}>
+    <Text style={{ 
+      fontSize: 18, 
+      fontWeight: '700', 
+      color: theme.text.primary,
+      marginBottom: 4
+    }}>
+      {value}
+    </Text>
+    <Text style={{ 
+      fontSize: 12, 
+      color: theme.text.secondary,
+      fontWeight: '500'
+    }}>
+      {label}
+    </Text>
+  </View>
+);
+
+const InfoSection: React.FC<{ title: string; children: React.ReactNode; theme: any; isRTL: boolean }> = ({ title, children, theme, isRTL }) => (
+  <View>
+    <Text style={{ 
+      fontSize: 18, 
+      fontWeight: '600', 
+      color: theme.text.primary,
+      marginBottom: 16,
+      textAlign: isRTL ? 'right' : 'left'
+    }}>
+      {title}
+    </Text>
     {children}
   </View>
 );
 
-interface InfoRowProps { icon: any; label: string; value: string | number; theme: any; isRTL: boolean }
-const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, theme, isRTL }) => (
-  <View style={{
-    flexDirection: isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    gap: 12,
+const InfoGrid: React.FC<{ children: React.ReactNode; theme: any; isRTL: boolean }> = ({ children, theme, isRTL }) => (
+  <View style={{ 
+    backgroundColor: theme.background.surface,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12
   }}>
-    <Ionicons name={icon} size={20} color={theme.text.muted} />
-    <Text style={{ color: theme.text.secondary, flex: 1 }}>{label}:</Text>
-    <Text style={{ color: theme.text.primary, fontWeight: '600' }}>{value}</Text>
+    {children}
   </View>
 );
 
-interface PersonalityTraitProps { label: string; value: number; icon: any; color: string; theme: any; isRTL: boolean }
-const PersonalityTrait: React.FC<PersonalityTraitProps> = ({ label, value, icon, color, theme, isRTL }) => (
-  <View style={{
-    flexDirection: isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  }}>
+const InfoItem: React.FC<{ icon: string; label: string; value: string; theme: any }> = ({ icon, label, value, theme }) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
     <View style={{
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: color + '20',
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.primary[100],
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: isRTL ? 0 : 12,
-      marginLeft: isRTL ? 12 : 0,
     }}>
-      <Ionicons name={icon} size={18} color={color} />
+      <Ionicons name={icon as any} size={16} color={theme.primary[600]} />
     </View>
-    <Text style={{
-      flex: 1,
-      color: theme.text.primary,
-      fontSize: 14,
-    }}>
-      {label}
-    </Text>
-    <View style={{ flexDirection: 'row' }}>
-      {[1, 2, 3, 4, 5].map((level) => (
-        <View
-          key={level}
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: level <= value ? color : theme.border.light,
-            marginHorizontal: 2,
-          }}
-        />
-      ))}
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 12, color: theme.text.secondary, marginBottom: 2 }}>{label}</Text>
+      <Text style={{ fontSize: 14, color: theme.text.primary, fontWeight: '500' }}>{value}</Text>
     </View>
   </View>
 );
 
-interface RatingBarProps { label: string; value: number; theme: any; isRTL: boolean }
-const RatingBar: React.FC<RatingBarProps> = ({ label, value, theme, isRTL }) => (
-  <View>
+const InfoRow: React.FC<{ icon: string; label: string; value: string; theme: any; isRTL?: boolean }> = ({ icon, label, value, theme, isRTL }) => (
+  <View style={{ 
+    width: '48%',
+    flexDirection: isRTL ? 'row-reverse' : 'row', 
+    alignItems: 'center', 
+    marginBottom: 8,
+    paddingVertical: 4
+  }}>
     <View style={{
-      flexDirection: isRTL ? 'row-reverse' : 'row',
-      justifyContent: 'space-between',
-      marginBottom: 4,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.primary[100],
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: isRTL ? 0 : 8,
+      marginLeft: isRTL ? 8 : 0,
     }}>
-      <Text style={{ fontSize: 12, color: theme.text.secondary }}>{label}</Text>
-      <Text style={{ fontSize: 12, color: theme.text.primary, fontWeight: '600' }}>
-        {value.toFixed(1)}
+      <Ionicons name={icon as any} size={11} color={theme.primary[600]} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={{ 
+        fontSize: 10, 
+        color: theme.text.secondary,
+        textAlign: isRTL ? 'right' : 'left'
+      }}>{label}</Text>
+      <Text style={{ 
+        fontSize: 12, 
+        color: theme.text.primary, 
+        fontWeight: '500',
+        textAlign: isRTL ? 'right' : 'left'
+      }}>{value}</Text>
+    </View>
+  </View>
+);
+
+const PersonalityTrait: React.FC<{ label: string; value: number; color: string; theme: any; isRTL?: boolean }> = ({ label, value, color, theme, isRTL }) => (
+  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+    <Text style={{ fontSize: 15, color: theme.text.primary, fontWeight: '500', textAlign: isRTL ? 'right' : 'left' }}>{label}</Text>
+    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 4 }}>
+        {[1, 2, 3, 4, 5].map((level) => (
+          <View
+            key={level}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: level <= value ? color : theme.border.light,
+            }}
+          />
+        ))}
+      </View>
+      <Text style={{ fontSize: 13, color: theme.text.secondary, fontWeight: '500', minWidth: 24, textAlign: isRTL ? 'right' : 'left' }}>
+        {value}/5
       </Text>
     </View>
+  </View>
+);
+
+const RatingBar: React.FC<{ label: string; value: number; theme: any; isRTL?: boolean }> = ({ label, value, theme, isRTL }) => (
+  <View>
+    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+      <Text style={{ fontSize: 14, color: theme.text.primary, fontWeight: '500', textAlign: isRTL ? 'right' : 'left' }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: theme.text.secondary, textAlign: isRTL ? 'left' : 'right' }}>{value.toFixed(1)}</Text>
+    </View>
     <View style={{
-      height: 8,
+      height: 6,
       backgroundColor: theme.border.light,
-      borderRadius: 4,
+      borderRadius: 3,
       overflow: 'hidden',
     }}>
       <View style={{
         width: `${(value / 5) * 100}%`,
         height: '100%',
-        backgroundColor: theme.primary[500],
+        backgroundColor: '#F59E0B',
+        borderRadius: 3,
       }} />
     </View>
   </View>
 );
 
-interface StatCardProps { icon: any; value: number | string; label: string; theme: any }
-const StatCard: React.FC<StatCardProps> = ({ icon, value, label, theme }) => (
-  <View style={{ alignItems: 'center' }}>
-    <View style={{
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: theme.primary[100],
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 8,
+const MedicalTag: React.FC<{ label: string; type: 'warning' | 'medication'; theme: any }> = ({ label, type, theme }) => (
+  <View style={{
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: type === 'warning' ? '#FEF3C7' : '#DBEAFE',
+    borderWidth: 1,
+    borderColor: type === 'warning' ? '#F59E0B' : '#3B82F6',
+  }}>
+    <Text style={{ 
+      fontSize: 12, 
+      color: type === 'warning' ? '#92400E' : '#1E40AF',
+      fontWeight: '500'
     }}>
-      <Ionicons name={icon} size={24} color={theme.primary[600]} />
-    </View>
-    <Text style={{ fontSize: 20, fontWeight: 'bold', color: theme.text.primary }}>
-      {value}
-    </Text>
-    <Text style={{ fontSize: 12, color: theme.text.secondary }}>
       {label}
     </Text>
   </View>

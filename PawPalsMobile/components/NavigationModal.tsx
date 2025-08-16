@@ -5,7 +5,6 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   Dimensions,
   StatusBar,
 } from 'react-native';
@@ -19,6 +18,7 @@ import {
   openNavigationApp,
   openDefaultNavigation,
 } from '../utils/navigationUtils';
+import OptimizedImage from './OptimizedImage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -281,14 +281,14 @@ export default function NavigationModal({ visible, onClose, options }: Navigatio
                         elevation: isSelected ? 8 : 4,
                       }}>
                         {appImage ? (
-                          <Image 
+                          <OptimizedImage
                             source={appImage}
-                            style={{
-                              width: 60,
-                              height: 60,
-                              borderRadius: 30, // Circular image
-                            }}
-                            resizeMode="contain"
+                            width={60}
+                            height={60}
+                            borderRadius={30}
+                            priority="high"
+                            cacheKey={`nav-app-${app.identifier}`}
+                            fallbackIcon="map"
                           />
                         ) : (
                           <Text style={{ fontSize: 45 }}>

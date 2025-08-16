@@ -1,14 +1,16 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   SafeAreaView,
   TextInput,
   ActivityIndicator,
   Alert,
   RefreshControl,
+  ListRenderItem,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -96,12 +98,12 @@ export default function ParksScreen() {
     if (!activeVisit) return;
 
     Alert.alert(
-      'צ\'ק-אאוט',
-      'האם אתה בטוח שברצונך לסיים את הביקור?',
+      t.parks.checkout,
+      t.parks.checkoutConfirm,
       [
-        { text: t.cancel, style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         { 
-          text: 'סיים ביקור', 
+          text: t.parks.endVisit, 
           onPress: async () => {
             try {
               console.log('Starting checkout process for visit:', activeVisit._id);
@@ -115,9 +117,9 @@ export default function ParksScreen() {
                 await loadActiveVisit();
                 
                 Alert.alert(
-                  'צ\'ק-אאוט הושלם! 👋',
-                  'הביקור הסתיים בהצלחה',
-                  [{ text: t.ok }]
+                  t.parks.checkoutSuccess,
+                  t.parks.checkoutSuccessMessage,
+                  [{ text: t.common.ok }]
                 );
                 
                 console.log('Checkout completed successfully');
@@ -132,9 +134,9 @@ export default function ParksScreen() {
               await loadActiveVisit();
               
               Alert.alert(
-                'שגיאה',
-                `אירעה שגיאה בסיום הביקור: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}. נסה שוב.`,
-                [{ text: t.ok }]
+                t.parks.error,
+                t.parks.checkoutError.replace('{error}', error instanceof Error ? error.message : 'Unknown error'),
+                [{ text: t.common.ok }]
               );
             }
           }
@@ -167,7 +169,7 @@ export default function ParksScreen() {
           // Request location permission if not available
           const granted = await requestPermission();
           if (!granted) {
-            setError(isRTL ? 'נדרש אישור למיקום כדי למצוא גנים קרובים' : 'Location permission required to find nearby parks');
+            setError(t.parks.locationPermissionRequired);
             setActiveFilter('all');
             return;
           }
@@ -186,7 +188,7 @@ export default function ParksScreen() {
       // The service layer now handles format normalization
       if (!Array.isArray(gardensData)) {
         console.error('Expected array but got:', gardensData);
-        setError(isRTL ? 'שגיאה בפורמט הנתונים' : 'Data format error');
+        setError(t.parks.dataFormatError);
         setGardens([]);
         return;
       }
@@ -217,7 +219,7 @@ export default function ParksScreen() {
       setGardens(gardensWithDistance);
     } catch (error) {
       console.error('Error loading gardens:', error);
-      setError(isRTL ? 'שגיאה בחיבור לשרת' : 'Server connection error');
+      setError(t.parks.serverConnectionError);
       setGardens([]);
     } finally {
       setLoading(false);
@@ -362,9 +364,11 @@ export default function ParksScreen() {
     setNavigationModalVisible(true);
   };
 
-  const renderGardenCard = (garden: GardenWithDistance) => (
+  // Garden card item height estimation for FlatList optimization
+  const GARDEN_ITEM_HEIGHT = isGuest ? 190 : 250; // Different heights based on user type
+
+  const renderGardenCard: ListRenderItem<GardenWithDistance> = useCallback(({ item: garden }) => (
     <TouchableOpacity 
-      key={garden._id}
       onPress={() => handleGardenPress(garden)} 
       style={{
         backgroundColor: theme.background.card,
@@ -597,6 +601,19 @@ export default function ParksScreen() {
         </View>
       )}
     </TouchableOpacity>
+  ), [theme, isRTL, t, isGuest, handleGardenPress, handleCheckIn, handleNavigate, formatDistance]);
+
+  // FlatList key extractor
+  const keyExtractor = useCallback((item: GardenWithDistance) => item._id, []);
+
+  // FlatList getItemLayout for performance
+  const getItemLayout = useCallback(
+    (data: GardenWithDistance[] | null | undefined, index: number) => ({
+      length: GARDEN_ITEM_HEIGHT,
+      offset: GARDEN_ITEM_HEIGHT * index,
+      index,
+    }),
+    [GARDEN_ITEM_HEIGHT]
   );
 
   return (
@@ -749,196 +766,206 @@ export default function ParksScreen() {
       </View>
 
       {/* Gardens List */}
-      <ScrollView 
-        style={{ flex: 1, backgroundColor: theme.background.secondary }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.primary[500]]}
-            tintColor={theme.primary[500]}
-          />
-        }
-      >
-        {loading ? (
-          <View style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            paddingVertical: 80
-          }}>
-            <ActivityIndicator size="large" color={theme.primary[500]} />
-            <Text style={{
-              color: theme.text.secondary,
-              marginTop: 12,
-              fontSize: 16
-            }}>{t.loadingParks}</Text>
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: 0, paddingVertical: 8 }}>
-            {/* Active Visit Card */}
-            {activeVisit && activeVisit._id && !isGuest && (
-              <View style={{
-                backgroundColor: '#F0FDF4',
-                borderWidth: 2,
-                borderColor: '#10B981',
-                borderRadius: 16,
-                padding: 20,
-                marginBottom: 16,
-                marginHorizontal: 16,
-                shadowColor: '#10B981',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 4,
-              }}>
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 12 }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    backgroundColor: '#10B981',
-                    borderRadius: 20,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: isRTL ? 0 : 12,
-                    marginLeft: isRTL ? 12 : 0,
-                  }}>
-                    <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{
-                      fontSize: 18,
-                      fontWeight: '700',
-                      color: '#059669',
-                      textAlign: isRTL ? 'right' : 'left',
+      {loading ? (
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 80
+        }}>
+          <ActivityIndicator size="large" color={theme.primary[500]} />
+          <Text style={{
+            color: theme.text.secondary,
+            marginTop: 12,
+            fontSize: 16
+          }}>{t.loadingParks}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredGardens || []}
+          renderItem={renderGardenCard}
+          keyExtractor={keyExtractor}
+          getItemLayout={getItemLayout}
+          style={{ flex: 1, backgroundColor: theme.background.secondary }}
+          contentContainerStyle={{ paddingVertical: 8 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary[500]]}
+              tintColor={theme.primary[500]}
+            />
+          }
+          // Performance optimizations
+          initialNumToRender={5}
+          maxToRenderPerBatch={8}
+          windowSize={10}
+          removeClippedSubviews={true}
+          onEndReachedThreshold={0.5}
+          // Header components for active visit and guest info
+          ListHeaderComponent={
+            <View>
+              {/* Active Visit Card */}
+              {activeVisit && activeVisit._id && !isGuest && (
+                <View style={{
+                  backgroundColor: '#F0FDF4',
+                  borderWidth: 2,
+                  borderColor: '#10B981',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 16,
+                  marginHorizontal: 16,
+                  shadowColor: '#10B981',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}>
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      backgroundColor: '#10B981',
+                      borderRadius: 20,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: isRTL ? 0 : 12,
+                      marginLeft: isRTL ? 12 : 0,
                     }}>
-                      צ'ק-אין פעיל
-                    </Text>
+                      <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{
+                        fontSize: 18,
+                        fontWeight: '700',
+                        color: '#059669',
+                        textAlign: isRTL ? 'right' : 'left',
+                      }}>
+                        צ'ק-אין פעיל
+                      </Text>
+                      <Text style={{
+                        fontSize: 14,
+                        color: '#065F46',
+                        textAlign: isRTL ? 'right' : 'left',
+                      }}>
+                        {typeof activeVisit.garden === 'object' ? activeVisit.garden.name : 'גן כלבים'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 16 }}>
                     <Text style={{
                       fontSize: 14,
                       color: '#065F46',
                       textAlign: isRTL ? 'right' : 'left',
+                      flex: 1,
                     }}>
-                      {typeof activeVisit.garden === 'object' ? activeVisit.garden.name : 'גן כלבים'}
+                      {activeVisit.dogs && Array.isArray(activeVisit.dogs) ? 
+                        `כלבים: ${activeVisit.dogs.map(dog => typeof dog === 'object' ? dog.name : dog).join(', ')}` :
+                        'עם הכלב שלך'
+                      }
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    onPress={handleCheckOut}
+                    style={{
+                      backgroundColor: '#EF4444',
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                      paddingHorizontal: 20,
+                      alignSelf: isRTL ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      fontSize: 14,
+                      fontWeight: '600',
+                    }}>
+                      סיים ביקור
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              
+              {isGuest && (
+                <View style={{
+                  backgroundColor: theme.primary[50],
+                  borderWidth: 1,
+                  borderColor: theme.primary[200],
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 20,
+                  marginHorizontal: 16
+                }}>
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
+                    <Ionicons name="information-circle" size={20} color={theme.primary[500]} />
+                    <Text style={{
+                      color: theme.primary[800],
+                      fontWeight: '500',
+                      marginLeft: isRTL ? 0 : 8,
+                      marginRight: isRTL ? 8 : 0,
+                      flex: 1,
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}>
+                      {t.signUpForCheckinAndMore}
                     </Text>
                   </View>
                 </View>
-                
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 16 }}>
-                  <Text style={{
-                    fontSize: 14,
-                    color: '#065F46',
-                    textAlign: isRTL ? 'right' : 'left',
-                    flex: 1,
-                  }}>
-                    {activeVisit.dogs && Array.isArray(activeVisit.dogs) ? 
-                      `כלבים: ${activeVisit.dogs.map(dog => typeof dog === 'object' ? dog.name : dog).join(', ')}` :
-                      'עם הכלב שלך'
-                    }
-                  </Text>
-                </View>
-                
-                <TouchableOpacity
-                  onPress={handleCheckOut}
-                  style={{
-                    backgroundColor: '#EF4444',
-                    borderRadius: 12,
-                    paddingVertical: 12,
-                    paddingHorizontal: 20,
-                    alignSelf: isRTL ? 'flex-end' : 'flex-start',
-                  }}
-                >
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontSize: 14,
-                    fontWeight: '600',
-                  }}>
-                    סיים ביקור
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            
-            {isGuest && (
-              <View style={{
-                backgroundColor: theme.primary[50],
-                borderWidth: 1,
-                borderColor: theme.primary[200],
-                borderRadius: 16,
-                padding: 20,
-                marginBottom: 20,
-                marginHorizontal: 16
-              }}>
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
-                  <Ionicons name="information-circle" size={20} color={theme.primary[500]} />
-                  <Text style={{
-                    color: theme.primary[800],
-                    fontWeight: '500',
-                    marginLeft: isRTL ? 0 : 8,
-                    marginRight: isRTL ? 8 : 0,
-                    flex: 1,
-                    textAlign: isRTL ? 'right' : 'left'
-                  }}>
-                    {t.signUpForCheckinAndMore}
-                  </Text>
-                </View>
-              </View>
-            )}
-            
-            {/* Error State */}
-            {error && (
-              <View style={{
-                backgroundColor: theme.background.card,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 16,
-                marginHorizontal: 4,
-                borderWidth: 1,
-                borderColor: '#FCA5A5'
-              }}>
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
-                  <Ionicons name="alert-circle" size={20} color="#EF4444" />
-                  <Text style={{
-                    color: '#EF4444',
-                    fontWeight: '500',
-                    marginLeft: isRTL ? 0 : 8,
-                    marginRight: isRTL ? 8 : 0,
-                    flex: 1,
-                    textAlign: isRTL ? 'right' : 'left'
-                  }}>
-                    {error}
-                  </Text>
-                </View>
-              </View>
-            )}
-            
-            {/* Parks List */}
-            {filteredGardens && filteredGardens.length > 0 ? (
-              filteredGardens.map((garden) => renderGardenCard(garden))
-            ) : !loading && !error ? (
-              <View style={{
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-                paddingVertical: 80
-              }}>
-                <Ionicons name="leaf-outline" size={64} color={theme.text.muted} />
-                <Text style={{
-                  color: theme.text.secondary,
-                  textAlign: 'center',
-                  fontSize: 16,
-                  marginTop: 16
+              )}
+              
+              {/* Error State */}
+              {error && (
+                <View style={{
+                  backgroundColor: theme.background.card,
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 16,
+                  marginHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: '#FCA5A5'
                 }}>
-                  {searchText ? 
-                    (isRTL ? 'לא נמצאו גנים עם החיפוש' : 'No parks found matching your search') :
-                    (isRTL ? 'אין גנים זמינים' : 'No parks available')
-                  }
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        )}
-      </ScrollView>
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
+                    <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                    <Text style={{
+                      color: '#EF4444',
+                      fontWeight: '500',
+                      marginLeft: isRTL ? 0 : 8,
+                      marginRight: isRTL ? 8 : 0,
+                      flex: 1,
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}>
+                      {error}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          }
+          ListEmptyComponent={!error ? (
+            <View style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingVertical: 80
+            }}>
+              <Ionicons name="leaf-outline" size={64} color={theme.text.muted} />
+              <Text style={{
+                color: theme.text.secondary,
+                textAlign: 'center',
+                fontSize: 16,
+                marginTop: 16
+              }}>
+                {searchText ? 
+                  (isRTL ? 'לא נמצאו גנים עם החיפוש' : 'No parks found matching your search') :
+                  (isRTL ? 'אין גנים זמינים' : 'No parks available')
+                }
+              </Text>
+            </View>
+          ) : null}
+        />
+      )}
       
       {/* Navigation Modal */}
       <NavigationModal

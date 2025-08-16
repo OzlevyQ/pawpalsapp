@@ -31,11 +31,17 @@
         "applinks:app.pawpals.com"
       ],
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "NSCameraUsageDescription": "האפליקציה זקוקה לגישה למצלמה כדי לצלם תמונות של הכלבים שלך / This app needs access to camera to take photos of your dogs.",
+        "NSPhotoLibraryUsageDescription": "האפליקציה זקוקה לגישה לגלריית התמונות כדי לבחור תמונות של הכלבים שלך / This app needs access to photo library to select photos of your dogs.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "com.pawpals.mobile.deeplink",
-            "CFBundleURLSchemes": ["pawpals"]
+            "CFBundleURLSchemes": [
+              "pawpals"
+            ]
           }
         ]
       }
@@ -52,7 +58,10 @@
         "VIBRATE",
         "WAKE_LOCK",
         "com.google.android.c2dm.permission.RECEIVE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ],
       "intentFilters": [
         {
@@ -63,14 +72,17 @@
               "host": "pawpals.app"
             },
             {
-              "scheme": "https", 
+              "scheme": "https",
               "host": "app.pawpals.com"
             },
             {
               "scheme": "pawpals"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -80,6 +92,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you add pictures of your dogs.",
+          "cameraPermission": "The app accesses your camera to let you take pictures of your dogs.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-notifications",
         {
@@ -98,7 +118,8 @@
         {
           "enableBackgroundTasksSupport": true
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

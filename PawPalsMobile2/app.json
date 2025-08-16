@@ -1,0 +1,127 @@
+{
+  "expo": {
+    "name": "PawPals",
+    "slug": "pawpals-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "pawpals",
+    "linking": {
+      "prefixes": [
+        "pawpals://",
+        "https://pawpals.app",
+        "https://app.pawpals.com"
+      ]
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#10b981"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pawpals.mobile",
+      "associatedDomains": [
+        "applinks:pawpals.app",
+        "applinks:app.pawpals.com"
+      ],
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "com.pawpals.mobile.deeplink",
+            "CFBundleURLSchemes": [
+              "pawpals"
+            ]
+          }
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#10b981"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.pawpals.mobile",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "com.google.android.c2dm.permission.RECEIVE",
+        "POST_NOTIFICATIONS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "pawpals.app"
+            },
+            {
+              "scheme": "https",
+              "host": "app.pawpals.com"
+            },
+            {
+              "scheme": "pawpals"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#10b981",
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": true,
+          "sounds": [
+            "./assets/sounds/new-message.wav",
+            "./assets/sounds/event-reminder.wav"
+          ]
+        }
+      ],
+      [
+        "expo-task-manager",
+        {
+          "enableBackgroundTasksSupport": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d6a3770c-d510-4a27-ba10-8a8452ee48ee"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d6a3770c-d510-4a27-ba10-8a8452ee48ee"
+    }
+  }
+}

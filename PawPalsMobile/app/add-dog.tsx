@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -20,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
 import { dogsApi } from '../services/api';
+import OptimizedImage from '../components/OptimizedImage';
 
 export default function AddDogScreen() {
   const router = useRouter();
@@ -72,15 +72,91 @@ export default function AddDogScreen() {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
+    // הצגת אפשרויות למשתמש
+    Alert.alert(
+      isRTL ? 'בחר תמונה' : 'Select Photo',
+      isRTL ? 'איך תרצה להוסיף תמונה?' : 'How would you like to add a photo?',
+      [
+        {
+          text: isRTL ? 'מצלמה' : 'Camera',
+          onPress: () => takePhoto(),
+        },
+        {
+          text: isRTL ? 'גלריה' : 'Gallery',
+          onPress: () => pickFromGallery(),
+        },
+        {
+          text: isRTL ? 'ביטול' : 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+  const takePhoto = async () => {
+    try {
+      // בדיקת הרשאות מצלמה
+      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (cameraPermission.granted === false) {
+        Alert.alert(
+          isRTL ? 'הרשאה נדרשת' : 'Permission Required',
+          isRTL ? 'כדי לצלם תמונה, אנא אפשר גישה למצלמה בהגדרות המכשיר' : 'To take a photo, please allow camera access in device settings',
+          [{ text: isRTL ? 'אישור' : 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+        console.log('Photo taken:', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert(
+        isRTL ? 'שגיאה' : 'Error',
+        isRTL ? 'אירעה שגיאה בצילום התמונה. נסה שוב.' : 'Error taking photo. Please try again.',
+        [{ text: isRTL ? 'אישור' : 'OK' }]
+      );
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      // בדיקת הרשאות לפני גישה לגלריה
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert(
+          isRTL ? 'הרשאה נדרשת' : 'Permission Required',
+          isRTL ? 'כדי להוסיף תמונה, אנא אפשר גישה לגלריה בהגדרות המכשיר' : 'To add a photo, please allow access to your photo library in device settings',
+          [{ text: isRTL ? 'אישור' : 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert(
+        isRTL ? 'שגיאה' : 'Error',
+        isRTL ? 'אירעה שגיאה בבחירת התמונה. נסה שוב.' : 'Error selecting image. Please try again.',
+        [{ text: isRTL ? 'אישור' : 'OK' }]
+      );
     }
   };
 
@@ -111,10 +187,27 @@ export default function AddDogScreen() {
       if (response.success) {
         // If there's an image, upload it
         if (image && response.data?.dog?._id) {
-          const imageResponse = await dogsApi.uploadDogImage(response.data.dog._id, image);
-          if (!imageResponse.success) {
-            console.warn('Failed to upload dog image:', imageResponse.error);
-            // Still continue, the dog was created successfully
+          console.log('Uploading image for dog:', response.data.dog._id);
+          try {
+            const imageResponse = await dogsApi.uploadDogImage(response.data.dog._id, image);
+            if (imageResponse.success) {
+              console.log('Image uploaded successfully');
+            } else {
+              console.warn('Failed to upload dog image:', imageResponse.error);
+              // Show a warning but don't block the success flow
+              Alert.alert(
+                isRTL ? 'אזהרה' : 'Warning',
+                isRTL ? 'הכלב נוסף בהצלחה אך התמונה לא עלתה. תוכל להוסיף תמונה מאוחר יותר.' : 'Dog added successfully but image failed to upload. You can add an image later.',
+                [{ text: isRTL ? 'אישור' : 'OK' }]
+              );
+            }
+          } catch (imageError) {
+            console.error('Error uploading image:', imageError);
+            Alert.alert(
+              isRTL ? 'אזהרה' : 'Warning',
+              isRTL ? 'הכלב נוסף בהצלחה אך התמונה לא עלתה. תוכל להוסיף תמונה מאוחר יותר.' : 'Dog added successfully but image failed to upload. You can add an image later.',
+              [{ text: isRTL ? 'אישור' : 'OK' }]
+            );
           }
         }
         
@@ -248,6 +341,25 @@ export default function AddDogScreen() {
           {/* Image Picker */}
           <TouchableOpacity
             onPress={pickImage}
+            onLongPress={() => {
+              if (image) {
+                Alert.alert(
+                  isRTL ? 'הסר תמונה' : 'Remove Photo',
+                  isRTL ? 'האם אתה בטוח שברצונך להסיר את התמונה?' : 'Are you sure you want to remove the photo?',
+                  [
+                    {
+                      text: isRTL ? 'ביטול' : 'Cancel',
+                      style: 'cancel',
+                    },
+                    {
+                      text: isRTL ? 'הסר' : 'Remove',
+                      style: 'destructive',
+                      onPress: () => setImage(null),
+                    },
+                  ]
+                );
+              }
+            }}
             style={{
               alignItems: 'center',
               paddingVertical: 32,
@@ -265,9 +377,13 @@ export default function AddDogScreen() {
               borderStyle: 'dashed',
             }}>
               {image ? (
-                <Image
-                  source={{ uri: image }}
-                  style={{ width: 114, height: 114, borderRadius: 57 }}
+                <OptimizedImage
+                  uri={image}
+                  width={114}
+                  height={114}
+                  borderRadius={57}
+                  priority="high"
+                  fallbackIcon="camera"
                 />
               ) : (
                 <>
@@ -276,6 +392,7 @@ export default function AddDogScreen() {
                     color: theme.primary[500],
                     fontSize: 12,
                     marginTop: 4,
+                    textAlign: 'center',
                   }}>
                     {isRTL ? 'הוסף תמונה' : 'Add Photo'}
                   </Text>
@@ -283,6 +400,20 @@ export default function AddDogScreen() {
               )}
             </View>
           </TouchableOpacity>
+
+          {/* Help text */}
+          <Text style={{
+            textAlign: 'center',
+            color: theme.text.muted,
+            fontSize: 12,
+            marginBottom: 20,
+            paddingHorizontal: 20,
+          }}>
+            {image 
+              ? (isRTL ? 'לחץ ארוך להסרת התמונה' : 'Long press to remove photo')
+              : (isRTL ? 'לחץ להוספת תמונה מהמצלמה או הגלריה' : 'Tap to add photo from camera or gallery')
+            }
+          </Text>
 
           <View style={{ paddingHorizontal: 20 }}>
             {/* Basic Information */}

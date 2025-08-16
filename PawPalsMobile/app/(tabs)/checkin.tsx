@@ -28,19 +28,44 @@ export default function CheckinScreen() {
   const [selectedGarden, setSelectedGarden] = useState<Garden | null>(null);
   const [activeVisit, setActiveVisit] = useState<Visit | null>(null);
   const [loadingActiveVisit, setLoadingActiveVisit] = useState(false);
+  const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
+  const [loadingRecentVisits, setLoadingRecentVisits] = useState(false);
+  const [checkinLoading, setCheckinLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const router = useRouter();
   const { theme } = useTheme();
   const { t, isRTL } = useLanguage();
   const { isGuest, user, dogs } = useUser();
   const { width, height } = Dimensions.get('window');
 
-  // Load active visit when component mounts
+  // Helper function to calculate time ago
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days > 0) {
+      return days === 1 ? t.checkin?.timeAgo?.dayAgo : t.checkin?.timeAgo?.daysAgo?.replace('{count}', days.toString());
+    } else if (hours > 0) {
+      return hours === 1 ? t.checkin?.timeAgo?.hourAgo : t.checkin?.timeAgo?.hoursAgo?.replace('{count}', hours.toString());
+    } else if (minutes > 0) {
+      return minutes === 1 ? t.checkin?.timeAgo?.minuteAgo : t.checkin?.timeAgo?.minutesAgo?.replace('{count}', minutes.toString());
+    } else {
+      return t.checkin?.timeAgo?.justNow;
+    }
+  };
+
+  // Load active visit and recent visits when component mounts
   useEffect(() => {
     if (!isGuest) {
       loadActiveVisit();
+      loadRecentVisits();
     } else {
-      // Ensure activeVisit is null for guests
+      // Ensure activeVisit and recentVisits are null/empty for guests
       setActiveVisit(null);
+      setRecentVisits([]);
     }
   }, [isGuest]);
 
@@ -53,10 +78,10 @@ export default function CheckinScreen() {
       
       // More robust checking for active visit data
       if (result.success && result.data && result.data._id) {
-        console.log('Active visit found:', result.data);
+        console.log('Active visit found');
         setActiveVisit(result.data);
       } else {
-        console.log('No active visit found, result:', result);
+        console.log('No active visit found');
         setActiveVisit(null);
       }
     } catch (error) {
@@ -67,18 +92,72 @@ export default function CheckinScreen() {
     }
   };
 
+  const loadRecentVisits = async () => {
+    if (isGuest) return;
+    
+    try {
+      setLoadingRecentVisits(true);
+      const result = await visitsApi.getMyVisits({ status: 'completed', limit: 5 });
+      
+      if (result.success && result.data) {
+        // Check if result.data has visits property (expected format from backend)
+        let visitsArray: Visit[] = [];
+        
+        if (result.data.visits && Array.isArray(result.data.visits)) {
+          // Backend returns { total: number, visits: Visit[] }
+          visitsArray = result.data.visits;
+          console.log('Found', visitsArray.length, 'completed visits');
+        } else if (Array.isArray(result.data)) {
+          // Fallback: result.data is directly an array
+          visitsArray = result.data;
+          console.log('Using fallback format with', visitsArray.length, 'visits');
+        }
+        
+        if (visitsArray.length > 0) {
+          // Sort by checkOutTime or checkInTime desc to get most recent first
+          const sortedVisits = visitsArray.sort((a, b) => {
+            const dateA = new Date(a.checkOutTime || a.checkInTime).getTime();
+            const dateB = new Date(b.checkOutTime || b.checkInTime).getTime();
+            return dateB - dateA;
+          }).slice(0, 3); // Take only the 3 most recent
+          
+          console.log('Setting recent visits:', sortedVisits.length, 'visits');
+          setRecentVisits(sortedVisits);
+        } else {
+          console.log('No visits found in response');
+          setRecentVisits([]);
+        }
+      } else {
+        console.log('No recent visits found or API error:', result);
+        setRecentVisits([]);
+      }
+    } catch (error) {
+      console.error('Error loading recent visits:', error);
+      setRecentVisits([]);
+    } finally {
+      setLoadingRecentVisits(false);
+    }
+  };
+
+  const refreshData = async () => {
+    if (!isGuest) {
+      await Promise.all([loadActiveVisit(), loadRecentVisits()]);
+    }
+  };
+
   const handleCheckOut = async () => {
     if (!activeVisit) return;
 
     Alert.alert(
-      'צ\'ק-אאוט',
-      'האם אתה בטוח שברצונך לסיים את הביקור?',
+      t.checkin?.alerts?.checkout,
+      t.checkin?.alerts?.checkoutConfirm,
       [
-        { text: t.cancel, style: 'cancel' },
+        { text: t.common?.cancel, style: 'cancel' },
         { 
-          text: 'סיים ביקור', 
+          text: t.checkin?.endVisit, 
           onPress: async () => {
             try {
+              setCheckoutLoading(true);
               console.log('Starting checkout process for visit:', activeVisit._id);
               const result = await visitsApi.checkout(activeVisit._id);
               
@@ -86,13 +165,13 @@ export default function CheckinScreen() {
                 // Clear active visit immediately
                 setActiveVisit(null);
                 
-                // Also reload active visit to ensure backend state is synced
-                await loadActiveVisit();
+                // Refresh both active visit and recent visits data
+                await refreshData();
                 
                 Alert.alert(
-                  'צ\'ק-אאוט הושלם! 👋',
-                  'הביקור הסתיים בהצלחה',
-                  [{ text: t.ok }]
+                  t.checkin?.alerts?.checkoutSuccess || 'צ׳ק-אאוט הושלם! 👋',
+                  t.checkin?.alerts?.checkoutSuccessMessage || 'הביקור הסתיים בהצלחה',
+                  [{ text: t.common?.ok }]
                 );
                 
                 console.log('Checkout completed successfully');
@@ -103,14 +182,16 @@ export default function CheckinScreen() {
             } catch (error) {
               console.error('Check-out error:', error);
               
-              // Try to reload active visit in case of error to ensure UI is in sync
-              await loadActiveVisit();
+              // Try to reload data in case of error to ensure UI is in sync
+              await refreshData();
               
               Alert.alert(
-                'שגיאה',
-                `אירעה שגיאה בסיום הביקור: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}. נסה שוב.`,
-                [{ text: t.ok }]
+                t.checkin?.alerts?.checkoutError,
+                t.checkin?.alerts?.genericCheckoutError?.replace('{error}', error instanceof Error ? error.message : t.errors?.unknownError),
+                [{ text: t.common?.ok }]
               );
+            } finally {
+              setCheckoutLoading(false);
             }
           }
         },
@@ -134,9 +215,19 @@ export default function CheckinScreen() {
       const result = await gardensService.getGardens({ limit: 20, page: 1 });
       if (Array.isArray(result)) {
         setGardens(result);
+      } else {
+        throw new Error('Failed to load gardens');
       }
     } catch (error) {
       console.error('Error loading gardens:', error);
+      Alert.alert(
+        t.checkin?.alerts?.errorLoadingGardens,
+        t.checkin?.alerts?.errorLoadingGardensMessage,
+        [
+          { text: t.common?.cancel, style: 'cancel' },
+          { text: t.common?.retry, onPress: loadGardens }
+        ]
+      );
     } finally {
       setGardensLoading(false);
     }
@@ -159,11 +250,11 @@ export default function CheckinScreen() {
     // Check if user already has an active visit
     if (activeVisit) {
       Alert.alert(
-        'יש כבר צ\'ק-אין פעיל',
-        'עליך לסיים את הביקור הנוכחי לפני שתוכל לבצע צ\'ק-אין חדש',
+        t.checkin?.alerts?.activeVisitExists,
+        t.checkin?.alerts?.activeVisitMessage,
         [
-          { text: t.cancel, style: 'cancel' },
-          { text: 'סיים ביקור', onPress: handleCheckOut },
+          { text: t.common?.cancel, style: 'cancel' },
+          { text: t.checkin?.endVisit || 'סיים ביקור', onPress: handleCheckOut },
         ]
       );
       return;
@@ -172,11 +263,11 @@ export default function CheckinScreen() {
     // Check if user has dogs
     if (!dogs || dogs.length === 0) {
       Alert.alert(
-        'אין כלבים רשומים',
-        'כדי לבצע צ\'ק-אין, תחילה הוסף כלב בפרופיל שלך',
+        t.checkin?.alerts?.noDogsRegistered || 'אין כלבים רשומים',
+        t.checkin?.alerts?.noDogsMessage || 'כדי לבצע צ׳ק-אין, תחילה הוסף כלב בפרופיל שלך',
         [
-          { text: t.cancel, style: 'cancel' },
-          { text: 'הוסף כלב', onPress: () => router.push('/add-dog') },
+          { text: t.common?.cancel, style: 'cancel' },
+          { text: t.checkin?.alerts?.addDog || 'הוסף כלב', onPress: () => router.push('/add-dog') },
         ]
       );
       return;
@@ -188,6 +279,7 @@ export default function CheckinScreen() {
 
   const performCheckIn = async (garden: Garden, selectedDogs: any[]) => {
     try {
+      setCheckinLoading(true);
       const dogNames = selectedDogs.map(dog => dog.name).join(', ');
       const dogIds = selectedDogs.map(dog => dog._id);
       
@@ -200,21 +292,42 @@ export default function CheckinScreen() {
         // Update active visit
         setActiveVisit(result.data);
         
+        // Refresh recent visits to include any changes
+        await loadRecentVisits();
+        
         Alert.alert(
-          'צ\'ק-אין בוצע בהצלחה! 🎉',
-          `${dogNames} בוצע צ\'ק-אין בגן ${garden.name}`,
-          [{ text: t.ok }]
+          t.checkin?.alerts?.checkinSuccess || 'צ׳ק-אין בוצע בהצלחה! 🎉',
+          `${dogNames} בוצע צ'ק-אין בגן ${garden.name}`,
+          [{ text: t.common?.ok || 'אוקיי' }]
         );
       } else {
         throw new Error(result.error || 'Check-in failed');
       }
     } catch (error) {
       console.error('Check-in error:', error);
+      
+      // Show more detailed error message based on error type
+      let errorMessage = t.checkin?.alerts?.genericCheckinError || 'אירעה שגיאה בביצוע הצ׳ק-אין. נסה שוב.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('Network')) {
+          errorMessage = t.checkin?.alerts?.networkError;
+        } else if (error.message.includes('already checked in') || error.message.includes('active visit')) {
+          errorMessage = t.checkin?.alerts?.alreadyCheckedIn || 'יש כבר ביקור פעיל. נא לסיים את הביקור הנוכחי לפני ביצוע צ׳ק-אין חדש.';
+        } else if (error.message.includes('not found')) {
+          errorMessage = t.checkin?.alerts?.gardenNotFound || 'הגן המבוקש לא נמצא. נא לבחור גן אחר.';
+        } else if (error.message.includes('unauthorized') || error.message.includes('401')) {
+          errorMessage = t.checkin?.alerts?.unauthorized || 'נדרשת התחברות מחדש. נא להתחבר שוב ולנסות.';
+        }
+      }
+      
       Alert.alert(
-        'שגיאה',
-        'אירעה שגיאה בביצוע הצ\'ק-אין. נסה שוב.',
-        [{ text: t.ok }]
+        t.checkin?.alerts?.checkinError || 'שגיאה בצ׳ק-אין',
+        errorMessage,
+        [{ text: t.common?.ok || 'אוקיי' }]
       );
+    } finally {
+      setCheckinLoading(false);
     }
   };
 
@@ -228,12 +341,12 @@ export default function CheckinScreen() {
 
   const handleGuestAction = () => {
     Alert.alert(
-      t.registrationRequired || 'נדרשת הרשמה',
-      t.signUpForCheckin || 'כדי לבצע צ\'ק-אין, אנא הירשם או התחבר לחשבון',
+      t.checkin?.registrationRequired,
+      t.checkin?.signUpForCheckin,
       [
-        { text: t.cancel || 'ביטול', style: 'cancel' },
-        { text: t.signUpNow || 'הירשם', onPress: () => router.push('/(auth)/register') },
-        { text: t.login || 'התחברות', onPress: () => router.push('/(auth)/login') },
+        { text: t.common?.cancel, style: 'cancel' },
+        { text: t.auth?.registerNow, onPress: () => router.push('/(auth)/register') },
+        { text: t.auth?.loginNow, onPress: () => router.push('/(auth)/login') },
       ]
     );
   };
@@ -263,7 +376,7 @@ export default function CheckinScreen() {
         marginBottom: 16,
         textAlign: 'center'
       }}>
-        {t.quickCheckin || 'צ\'ק-אין מהיר'}
+        {t.checkin?.quickCheckin}
       </Text>
       <Text style={{
         color: theme.text.secondary,
@@ -272,7 +385,7 @@ export default function CheckinScreen() {
         marginBottom: 32,
         lineHeight: 24
       }}>
-        {t.scanQrToCheckin || 'סרוק QR כדי לבצע צ\'ק-אין בגן כלבים'}
+        {t.checkin?.scanQrToCheckin}
       </Text>
       <TouchableOpacity 
         onPress={handleGuestAction}
@@ -288,7 +401,7 @@ export default function CheckinScreen() {
           fontSize: 18,
           fontWeight: '600'
         }}>
-          {t.signUpForSocial || 'הירשם עכשיו'}
+          {t.checkin?.signUpForSocial}
         </Text>
       </TouchableOpacity>
     </View>
@@ -309,14 +422,14 @@ export default function CheckinScreen() {
             marginBottom: 8,
             textAlign: 'center'
           }}>
-            {t.quickCheckin || 'צ\'ק-אין מהיר'}
+            {t.checkin?.quickCheckin}
           </Text>
           <Text style={{
             color: 'rgba(255, 255, 255, 0.9)',
             fontSize: 16,
             textAlign: 'center'
           }}>
-            {t.scanOrSelectPark || 'סרוק QR או בחר גן ידנית'}
+            {t.checkin?.scanOrSelectPark}
           </Text>
         </View>
       </LinearGradient>
@@ -359,7 +472,7 @@ export default function CheckinScreen() {
                     color: '#059669',
                     textAlign: isRTL ? 'right' : 'left',
                   }}>
-                    צ'ק-אין פעיל בגן
+                    {t.checkin?.activeCheckin}
                   </Text>
                   <Text style={{
                     fontSize: 16,
@@ -379,8 +492,8 @@ export default function CheckinScreen() {
                   textAlign: isRTL ? 'right' : 'left',
                 }}>
                   {activeVisit.dogs && Array.isArray(activeVisit.dogs) ? 
-                    `כלבים: ${activeVisit.dogs.map(dog => typeof dog === 'object' ? dog.name : dog).join(', ')}` :
-                    'עם הכלב שלך'
+                    `${t.checkin?.dogs}: ${activeVisit.dogs.map(dog => typeof dog === 'object' ? dog.name : dog).join(', ')}` :
+                    `${t.checkin?.with} ${t.checkin?.dogs}`
                   }
                 </Text>
                 <Text style={{
@@ -389,28 +502,39 @@ export default function CheckinScreen() {
                   textAlign: isRTL ? 'right' : 'left',
                   marginTop: 4,
                 }}>
-                  החל: {new Date(activeVisit.checkInTime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                  {t.checkin?.startedAt}: {new Date(activeVisit.checkInTime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </View>
               
               <TouchableOpacity
                 onPress={handleCheckOut}
+                disabled={checkoutLoading}
                 style={{
-                  backgroundColor: '#EF4444',
+                  backgroundColor: checkoutLoading ? '#9CA3AF' : '#EF4444',
                   borderRadius: 12,
                   paddingVertical: 12,
                   paddingHorizontal: 20,
                   alignSelf: 'center',
                   minWidth: 120,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
+                {checkoutLoading && (
+                  <ActivityIndicator 
+                    size="small" 
+                    color="#FFFFFF" 
+                    style={{ marginRight: 8 }} 
+                  />
+                )}
                 <Text style={{
                   color: '#FFFFFF',
                   fontSize: 14,
                   fontWeight: '600',
                   textAlign: 'center',
                 }}>
-                  סיים ביקור
+                  {checkoutLoading ? t.checkin?.endingVisit : t.checkin?.endVisit}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -451,12 +575,14 @@ export default function CheckinScreen() {
 
             <TouchableOpacity
               onPress={handleQRScan}
+              disabled={checkinLoading}
               style={{
-                backgroundColor: theme.primary[500],
+                backgroundColor: checkinLoading ? theme.primary[300] : theme.primary[500],
                 borderRadius: 16,
                 paddingVertical: 16,
                 paddingHorizontal: 32,
                 minWidth: 200,
+                opacity: checkinLoading ? 0.6 : 1
               }}
             >
               <View style={{
@@ -479,7 +605,7 @@ export default function CheckinScreen() {
                   fontWeight: 'bold',
                   textAlign: 'center'
                 }}>
-                  {t.scanQR || 'סרוק QR'}
+                  {t.checkin?.scanQR}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -488,8 +614,9 @@ export default function CheckinScreen() {
           {/* Manual Check-in */}
           <TouchableOpacity
             onPress={handleManualCheckin}
+            disabled={checkinLoading}
             style={{
-              backgroundColor: theme.background.card,
+              backgroundColor: checkinLoading ? theme.background.disabled : theme.background.card,
               borderRadius: 16,
               padding: 20,
               flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -497,12 +624,13 @@ export default function CheckinScreen() {
               justifyContent: 'space-between',
               shadowColor: theme.shadow.medium,
               shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
+              shadowOpacity: checkinLoading ? 0.05 : 0.1,
               shadowRadius: 4,
               elevation: 3,
               borderWidth: 1,
               borderColor: theme.border.light,
-              marginBottom: 32
+              marginBottom: 32,
+              opacity: checkinLoading ? 0.6 : 1
             }}
           >
             <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', flex: 1 }}>
@@ -526,14 +654,14 @@ export default function CheckinScreen() {
                   marginBottom: 4,
                   textAlign: isRTL ? 'right' : 'left'
                 }}>
-                  {t.manualCheckin || 'צ\'ק-אין ידני'}
+                  {t.checkin?.manualCheckin}
                 </Text>
                 <Text style={{
                   fontSize: 14,
                   color: theme.text.secondary,
                   textAlign: isRTL ? 'right' : 'left'
                 }}>
-                  {t.selectParkFromList || 'בחר גן מהרשימה'}
+                  {t.checkin?.selectParkFromList || 'בחר גן מהרשימה'}
                 </Text>
               </View>
             </View>
@@ -546,73 +674,157 @@ export default function CheckinScreen() {
 
           {/* Recent Check-ins */}
           <View>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: theme.text.primary,
-              marginBottom: 16,
-              textAlign: isRTL ? 'right' : 'left'
+            <View style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 16
             }}>
-              {t.recentCheckins || 'צ\'ק-אינים אחרונים'}
-            </Text>
+              <Text style={{
+                fontSize: 18,
+                fontWeight: '600',
+                color: theme.text.primary,
+                textAlign: isRTL ? 'right' : 'left'
+              }}>
+                {t.checkin?.recentCheckins}
+              </Text>
+              <TouchableOpacity
+                onPress={refreshData}
+                style={{
+                  padding: 8,
+                  borderRadius: 8,
+                  backgroundColor: theme.primary[50]
+                }}
+              >
+                <Ionicons 
+                  name="refresh" 
+                  size={16} 
+                  color={theme.primary[500]} 
+                />
+              </TouchableOpacity>
+            </View>
             
-            {[1, 2].map((item) => (
-              <View key={item} style={{
+            {loadingRecentVisits ? (
+              <View style={{
+                alignItems: 'center',
+                paddingVertical: 32
+              }}>
+                <ActivityIndicator size="small" color={theme.primary[500]} />
+                <Text style={{
+                  color: theme.text.secondary,
+                  marginTop: 8,
+                  fontSize: 14
+                }}>
+                  {t.checkin?.loadingRecentVisits || 'טוען ביקורים אחרונים...'}
+                </Text>
+              </View>
+            ) : recentVisits.length > 0 ? (
+              recentVisits.map((visit) => {
+                const gardenName = typeof visit.garden === 'object' && visit.garden ? visit.garden.name : 'גן כלבים';
+                const visitDate = new Date(visit.checkOutTime || visit.checkInTime);
+                const timeAgo = getTimeAgo(visitDate);
+                const duration = visit.duration ? Math.round(visit.duration / 60) : null; // Convert seconds to minutes
+                
+                return (
+                  <View key={visit._id} style={{
+                    backgroundColor: theme.background.card,
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 12,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: theme.border.light
+                  }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      backgroundColor: theme.primary[100],
+                      borderRadius: 20,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: isRTL ? 0 : 12,
+                      marginLeft: isRTL ? 12 : 0
+                    }}>
+                      <Ionicons name="leaf" size={20} color={theme.primary[500]} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: '600',
+                        color: theme.text.primary,
+                        textAlign: isRTL ? 'right' : 'left'
+                      }}>
+                        {gardenName}
+                      </Text>
+                      <Text style={{
+                        fontSize: 14,
+                        color: theme.text.secondary,
+                        marginTop: 2,
+                        textAlign: isRTL ? 'right' : 'left'
+                      }}>
+                        {timeAgo}{duration ? ` • ${duration} ${isRTL ? 'דק\'' : 'min'}` : ''}
+                      </Text>
+                      {visit.dogs && Array.isArray(visit.dogs) && visit.dogs.length > 0 && (
+                        <Text style={{
+                          fontSize: 12,
+                          color: theme.text.muted,
+                          marginTop: 2,
+                          textAlign: isRTL ? 'right' : 'left'
+                        }}>
+                          {t.checkin?.with || 'עם'}: {visit.dogs.map(dog => typeof dog === 'object' ? dog.name : dog).join(', ')}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={{
+                      backgroundColor: theme.primary[100],
+                      borderRadius: 12,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4
+                    }}>
+                      <Text style={{
+                        color: theme.primary[700],
+                        fontSize: 12,
+                        fontWeight: '600'
+                      }}>
+                        +10 {t.checkin?.points || 'נק׳'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={{
+                alignItems: 'center',
+                paddingVertical: 32,
                 backgroundColor: theme.background.card,
                 borderRadius: 12,
-                padding: 16,
-                marginBottom: 12,
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                alignItems: 'center',
                 borderWidth: 1,
                 borderColor: theme.border.light
               }}>
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  backgroundColor: theme.primary[100],
-                  borderRadius: 20,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: isRTL ? 0 : 12,
-                  marginLeft: isRTL ? 12 : 0
+                <Ionicons 
+                  name="time-outline" 
+                  size={32} 
+                  color={theme.text.muted} 
+                  style={{ marginBottom: 8 }}
+                />
+                <Text style={{
+                  color: theme.text.secondary,
+                  fontSize: 16,
+                  fontWeight: '500',
+                  marginBottom: 4
                 }}>
-                  <Ionicons name="leaf" size={20} color={theme.primary[500]} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: theme.text.primary,
-                    textAlign: isRTL ? 'right' : 'left'
-                  }}>
-                    גן כלבים מרכזי {item}
-                  </Text>
-                  <Text style={{
-                    fontSize: 14,
-                    color: theme.text.secondary,
-                    marginTop: 2,
-                    textAlign: isRTL ? 'right' : 'left'
-                  }}>
-                    לפני {item === 1 ? '2' : '5'} שעות
-                  </Text>
-                </View>
-                <View style={{
-                  backgroundColor: theme.primary[100],
-                  borderRadius: 12,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4
+                  {t.checkin?.noRecentVisits || 'אין ביקורים אחרונים'}
+                </Text>
+                <Text style={{
+                  color: theme.text.muted,
+                  fontSize: 14,
+                  textAlign: 'center'
                 }}>
-                  <Text style={{
-                    color: theme.primary[700],
-                    fontSize: 12,
-                    fontWeight: '600'
-                  }}>
-                    +{item === 1 ? '10' : '5'} נק'
-                  </Text>
-                </View>
+                  {t.checkin?.firstCheckinPrompt || 'בצע את הצ׳ק-אין הראשון שלך כדי לראות כאן את ההיסטוריה'}
+                </Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
       </ScrollView>
@@ -678,7 +890,7 @@ export default function CheckinScreen() {
                   color: '#1F2937',
                   textAlign: isRTL ? 'right' : 'left',
                 }}>
-                  בחר גן לצ'ק-אין
+                  {t.checkin?.selectGardenForCheckin || 'בחר גן לצ\'ק-אין'}
                 </Text>
                 <Text style={{
                   fontSize: 13,
@@ -686,7 +898,7 @@ export default function CheckinScreen() {
                   textAlign: isRTL ? 'right' : 'left',
                   marginTop: 2,
                 }}>
-                  בחר את הגן שבו אתה נמצא
+                  {t.checkin?.selectCurrentGarden || 'בחר את הגן שבו אתה נמצא'}
                 </Text>
               </View>
 
@@ -718,8 +930,48 @@ export default function CheckinScreen() {
                       marginTop: 12,
                       fontSize: 14,
                     }}>
-                      טוען גנים...
+                      {t.checkin?.loadingGardens || 'טוען גנים...'}
                     </Text>
+                  </View>
+                ) : gardens.length === 0 ? (
+                  <View style={{
+                    alignItems: 'center',
+                    paddingVertical: 40,
+                  }}>
+                    <Ionicons name="leaf-outline" size={32} color="#9CA3AF" style={{ marginBottom: 12 }} />
+                    <Text style={{
+                      color: '#6B7280',
+                      fontSize: 16,
+                      fontWeight: '500',
+                      marginBottom: 4
+                    }}>
+                      {t.checkin?.noGardensAvailable || 'אין גנים זמינים'}
+                    </Text>
+                    <Text style={{
+                      color: '#9CA3AF',
+                      fontSize: 14,
+                      textAlign: 'center',
+                      marginBottom: 16
+                    }}>
+                      {t.checkin?.noGardensInArea || 'לא ניתן למצוא גנים כלבים באזור'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={loadGardens}
+                      style={{
+                        backgroundColor: theme.primary[100],
+                        borderRadius: 8,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8
+                      }}
+                    >
+                      <Text style={{
+                        color: theme.primary[700],
+                        fontSize: 14,
+                        fontWeight: '600'
+                      }}>
+                        {t.common?.retry || 'נסה שוב'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <View style={{ gap: 12 }}>
@@ -798,8 +1050,8 @@ export default function CheckinScreen() {
         }}
         dogs={dogs || []}
         onSelectDog={handleDogSelection}
-        title="בחר כלבים לצ'ק-אין" 
-        subtitle={`בחר את הכלבים שתרצה לבצע צ'ק-אין ב${selectedGarden?.name || 'גן'}`}
+        title={t.checkin?.selectDogsForCheckin || 'בחר כלבים לצ׳ק-אין'} 
+        subtitle={`${t.checkin?.selectDogsAt || 'בחר את הכלבים שתרצה לבצע צ׳ק-אין ב'}${selectedGarden?.name || 'גן'}`}
       />
     </View>
   );

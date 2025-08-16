@@ -10,7 +10,6 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
@@ -24,6 +23,7 @@ import { useUserRealTimeData } from '../../hooks/useRealTimeData';
 import { DevelopmentChecker } from '../../utils/developmentChecker';
 import DogProfileModal from '../../components/DogProfileModal';
 import { userApi } from '../../services/api';
+import OptimizedImage from '../../components/OptimizedImage';
 
 const SettingsSwitch = memo(({ value, onValueChange, trackColor, thumbColor, ios_backgroundColor }) => {
   return (
@@ -413,7 +413,7 @@ export default function ProfileScreen() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ color: theme.text.inverse, fontSize: 20, fontWeight: 'bold', textAlign: isRTL ? 'right' : 'left' }}>{t.profile}</Text>
+              <Text style={{ color: theme.text.inverse, fontSize: 20, fontWeight: 'bold', textAlign: isRTL ? 'right' : 'left' }}>{t.profile.title}</Text>
               {/* Real-time connection indicator */}
               <View style={{
                 width: 8,
@@ -463,10 +463,19 @@ export default function ProfileScreen() {
                 {uploadingImage ? (
                   <ActivityIndicator size="large" color={theme.primary[500]} />
                 ) : (user?.profileImage || user?.image) ? (
-                  <Image
-                    source={{ uri: user.profileImage || user.image }}
-                    style={{ width: 96, height: 96, borderRadius: 48 }}
-                    resizeMode="cover"
+                  <OptimizedImage
+                    uri={user.profileImage || user.image}
+                    width={96}
+                    height={96}
+                    borderRadius={48}
+                    priority="high"
+                    cacheKey={`profile-${user._id}`}
+                    fallbackIcon="person-circle-outline"
+                    placeholder={
+                      <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: theme.primary[100], justifyContent: 'center', alignItems: 'center' }}>
+                        <ActivityIndicator size="small" color={theme.primary[500]} />
+                      </View>
+                    }
                   />
                 ) : (
                   <View style={{ alignItems: 'center' }}>
@@ -577,10 +586,14 @@ export default function ProfileScreen() {
                     overflow: 'hidden'
                   }}>
                     {dog.image ? (
-                      <Image
-                        source={{ uri: dog.image }}
-                        style={{ width: 48, height: 48 }}
-                        resizeMode="cover"
+                      <OptimizedImage
+                        uri={dog.image}
+                        width={48}
+                        height={48}
+                        borderRadius={24}
+                        priority="normal"
+                        cacheKey={`dog-${dog._id}`}
+                        fallbackIcon="paw"
                       />
                     ) : (
                       <Text style={{ fontSize: 24 }}>🐕</Text>

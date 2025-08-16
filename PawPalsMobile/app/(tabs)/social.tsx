@@ -121,7 +121,7 @@ export default function SocialScreen() {
             color: theme.text.primary,
             textAlign: isRTL ? 'right' : 'left'
           }}>
-            {t.social}
+            {t.navigation.social}
           </Text>
           <TouchableOpacity>
             <Ionicons name="add-circle-outline" size={28} color={theme.primary[500]} />

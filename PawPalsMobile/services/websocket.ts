@@ -24,6 +24,35 @@ export interface MessageData {
   chatId: string;
 }
 
+export interface GamificationUpdateData {
+  type: 'points_updated' | 'level_up' | 'streak_updated' | 'achievement_unlocked' | 'mission_completed';
+  data: {
+    points?: number;
+    level?: number;
+    previousLevel?: number;
+    streak?: number;
+    previousStreak?: number;
+    achievement?: {
+      _id: string;
+      name: string;
+      description: string;
+      icon?: string;
+      pointsReward: number;
+    };
+    mission?: {
+      _id: string;
+      title: string;
+      description: string;
+      pointsReward: number;
+      icon?: string;
+    };
+    totalPoints?: number;
+    reason?: string; // e.g., "check_in", "mission_complete", "daily_bonus"
+  };
+  userId: string;
+  timestamp: string;
+}
+
 class WebSocketService {
   private socket: Socket | null = null;
   private reconnectAttempts = 0;
@@ -139,6 +168,38 @@ class WebSocketService {
     // Dog rating updates
     this.socket.on('dogRatingUpdate', (data: { dogId: string; rating: number }) => {
       this.emit('dogRatingUpdate', data);
+    });
+
+    // Gamification events
+    this.socket.on('points_updated', (data: GamificationUpdateData) => {
+      console.log('🎮 Points updated:', data);
+      this.emit('points_updated', data);
+    });
+
+    this.socket.on('level_up', (data: GamificationUpdateData) => {
+      console.log('🎮 Level up:', data);
+      this.emit('level_up', data);
+    });
+
+    this.socket.on('streak_updated', (data: GamificationUpdateData) => {
+      console.log('🎮 Streak updated:', data);
+      this.emit('streak_updated', data);
+    });
+
+    this.socket.on('achievement_unlocked', (data: GamificationUpdateData) => {
+      console.log('🎮 Achievement unlocked:', data);
+      this.emit('achievement_unlocked', data);
+    });
+
+    this.socket.on('mission_completed', (data: GamificationUpdateData) => {
+      console.log('🎮 Mission completed:', data);
+      this.emit('mission_completed', data);
+    });
+
+    // Generic gamification update (fallback)
+    this.socket.on('gamification_update', (data: GamificationUpdateData) => {
+      console.log('🎮 Gamification update:', data);
+      this.emit('gamification_update', data);
     });
   }
 

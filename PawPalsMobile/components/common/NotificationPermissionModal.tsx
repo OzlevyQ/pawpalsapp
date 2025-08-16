@@ -8,6 +8,7 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ interface NotificationPermissionModalProps {
   onAllow: () => void;
   onNotNow: () => void;
   onNeverAsk: () => void;
+  onClose?: () => void;
 }
 
 export default function NotificationPermissionModal({
@@ -28,6 +30,7 @@ export default function NotificationPermissionModal({
   onAllow,
   onNotNow,
   onNeverAsk,
+  onClose,
 }: NotificationPermissionModalProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -132,12 +135,34 @@ export default function NotificationPermissionModal({
               borderRadius: 24,
               maxWidth: SCREEN_WIDTH - 40,
               width: '100%',
-              maxHeight: SCREEN_HEIGHT * 0.8,
+              height: SCREEN_HEIGHT * 0.85,
               transform: [{ scale: scaleAnim }],
               overflow: 'hidden',
             }}
           >
-            {/* Header with gradient */}
+            {/* Close button */}
+            {onClose && (
+              <TouchableOpacity
+                onPress={onClose}
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: isRTL ? undefined : 16,
+                  left: isRTL ? 16 : undefined,
+                  zIndex: 10,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            )}
+
+            {/* Header with gradient - Fixed */}
             <LinearGradient
               colors={[theme.primary[500], theme.primary[600]]}
               style={{
@@ -160,34 +185,41 @@ export default function NotificationPermissionModal({
               >
                 <Ionicons name="notifications" size={40} color="white" />
               </View>
-              
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                {isRTL ? 'הפעל התראות' : 'Enable Notifications'}
-              </Text>
-              
-              <Text
-                style={{
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  fontSize: 16,
-                  textAlign: 'center',
-                  lineHeight: 22,
-                }}
-              >
-                {isRTL 
-                  ? 'קבל את החוויה המלאה של PawPals עם התראות מותאמות אישית'
-                  : 'Get the full PawPals experience with personalized notifications'
-                }
-              </Text>
-            </LinearGradient>
+            
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 24,
+                fontWeight: 'bold',
+                textAlign: 'center',
+                marginBottom: 8,
+              }}
+            >
+              {isRTL ? 'הפעל התראות' : 'Enable Notifications'}
+            </Text>
+            
+            <Text
+              style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: 16,
+                textAlign: 'center',
+                lineHeight: 22,
+              }}
+            >
+              {isRTL 
+                ? 'קבל את החוויה המלאה של PawPals עם התראות מותאמות אישית'
+                : 'Get the full PawPals experience with personalized notifications'
+              }
+            </Text>
+          </LinearGradient>
 
+          {/* Scrollable white content */}
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
             {/* Features list */}
             <View style={{ paddingHorizontal: 24, paddingVertical: 24 }}>
               <Text
@@ -391,6 +423,7 @@ export default function NotificationPermissionModal({
                 )}
               </View>
             </View>
+            </ScrollView>
           </Animated.View>
         </TouchableWithoutFeedback>
       </Animated.View>

@@ -233,6 +233,7 @@ export default function Index() {
         onAllow={handleNotificationAllow}
         onNotNow={handleNotificationNotNow}
         onNeverAsk={handleNotificationNeverAsk}
+        onClose={() => setShowNotificationModal(false)}
       />
     </>
   );

@@ -203,7 +203,8 @@ const getAllGardens = async (req, res) => {
         });
       }
 
-      const gardenObj = garden.toObject();
+      // Since we're using lean(), garden is already a plain object
+      const gardenObj = { ...garden };
       gardenObj.currentOccupancy = visitData?.count || 0;
       gardenObj.currentVisitors = currentVisitors;
       

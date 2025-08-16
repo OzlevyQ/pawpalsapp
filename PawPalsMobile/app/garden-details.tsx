@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   StatusBar,
   SafeAreaView,
-  Image,
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +21,7 @@ import { visitsApi, Visit } from '../services/api';
 import { useLocation, calculateDistance, formatDistance } from '../hooks/useLocation';
 import NavigationModal from '../components/NavigationModal';
 import DogSelectionModal from '../components/DogSelectionModal';
+import OptimizedImage, { preloadImages } from '../components/OptimizedImage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -91,6 +91,11 @@ export default function GardenDetailsScreen() {
       setError(null);
       const garden = await gardensService.getGardenById(gardenId!);
       setGarden(garden);
+      
+      // Preload garden images for better performance
+      if (garden.images && garden.images.length > 0) {
+        preloadImages(garden.images);
+      }
     } catch (error) {
       console.error('Error loading garden details:', error);
       setError('שגיאה בחיבור לשרת');
@@ -440,11 +445,20 @@ export default function GardenDetailsScreen() {
               }}
             >
               {garden.images.map((image, index) => (
-                <Image
+                <OptimizedImage
                   key={index}
-                  source={{ uri: image }}
-                  style={{ width: screenWidth, height: 250 }}
-                  resizeMode="cover"
+                  uri={image}
+                  width={screenWidth}
+                  height={250}
+                  priority={index === 0 ? "high" : "normal"}
+                  cacheKey={`garden-${garden._id}-${index}`}
+                  fallbackIcon="leaf"
+                  showLoader={true}
+                  placeholder={
+                    <View style={{ width: screenWidth, height: 250, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }}>
+                      <ActivityIndicator size="large" color="#10B981" />
+                    </View>
+                  }
                 />
               ))}
             </ScrollView>
