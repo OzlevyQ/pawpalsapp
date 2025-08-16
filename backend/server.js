@@ -22,6 +22,7 @@ const photoRoutes = require('./src/routes/photos');
 const adminRoutes = require('./src/routes/admin');
 const requestRoutes = require('./src/routes/requests');
 const gamificationRoutes = require('./src/routes/gamification');
+const missionRoutes = require('./src/routes/missions');
 
 const app = express();
 
@@ -122,6 +123,7 @@ app.use('/api/photos', photoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/gamification', gamificationRoutes);
+app.use('/api/missions', missionRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

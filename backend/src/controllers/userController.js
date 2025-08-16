@@ -4,13 +4,25 @@ const NotificationService = require('../utils/notificationService');
 
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.userId);
+    const { fields } = req.query;
+    
+    // Default optimized field selection for user profile
+    let selectFields = 'firstName lastName email profileImage gamification preferences createdAt updatedAt';
+    
+    // Allow frontend to specify custom fields
+    if (fields) {
+      selectFields = fields.split(',').join(' ');
+    }
+
+    const user = await User.findById(req.userId)
+      .select(selectFields)
+      .lean(); // Use lean() for better performance
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Ensure gamification field exists
+    // Ensure gamification field exists and set defaults if missing
     if (!user.gamification) {
       user.gamification = {
         points: 0,
@@ -21,10 +33,19 @@ const getProfile = async (req, res) => {
         badges: [],
         achievements: []
       };
-      await user.save();
     }
 
-    res.json(user.toJSON());
+    // Create response with normalized structure for frontend
+    const response = {
+      ...user,
+      // Add gamification fields at root level for frontend compatibility
+      points: user.gamification.points || 0,
+      level: user.gamification.level || 1,
+      currentStreak: user.gamification.currentStreak || 0,
+      totalVisits: user.totalVisits || 0
+    };
+
+    res.json(response);
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Error fetching profile' });

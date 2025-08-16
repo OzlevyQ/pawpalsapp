@@ -9,6 +9,7 @@
     "build": "cd ../frontend && npm install && npm run build && cp -r dist ../backend/",
     "postbuild": "echo 'Frontend built and copied to backend'",
     "fix-garden-data": "node src/scripts/fixGardenData.js",
+    "create-missions": "node src/scripts/createDefaultMissions.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

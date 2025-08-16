@@ -54,7 +54,7 @@ router.get('/', getAllGardens);
 // Add the missing nearby route
 router.get('/nearby', async (req, res) => {
   try {
-    const { lat, lng, radius = 10 } = req.query;
+    const { lat, lng, radius = 10, fields } = req.query;
     
     if (!lat || !lng) {
       return res.status(400).json({ 
@@ -64,6 +64,9 @@ router.get('/nearby', async (req, res) => {
     
     // Use the existing getAllGardens function with location parameters
     req.query.maxDistance = radius;
+    if (fields) {
+      req.query.fields = fields;
+    }
     await getAllGardens(req, res);
   } catch (error) {
     console.error('Error fetching nearby gardens:', error);

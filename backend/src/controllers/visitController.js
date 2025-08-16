@@ -180,7 +180,7 @@ const checkOut = async (req, res) => {
 
 const getMyVisits = async (req, res) => {
   try {
-    const { status, gardenId, dogId, limit = 20, skip = 0 } = req.query;
+    const { status, gardenId, dogId, limit = 20, skip = 0, fields } = req.query;
 
     let query = { user: req.userId };
 
@@ -196,16 +196,26 @@ const getMyVisits = async (req, res) => {
       query.dogs = dogId;
     }
 
+    // Default optimized field selection for visits list
+    let selectFields = 'checkInTime checkOutTime garden dogs status duration createdAt';
+    
+    // Allow frontend to specify custom fields
+    if (fields) {
+      selectFields = fields.split(',').join(' ');
+    }
+
     const visits = await Visit.find(query)
+      .select(selectFields)
       .populate({
         path: 'dogs',
         select: 'name breed age image',
         match: { isActive: { $ne: false } } // Only populate active dogs
       })
-      .populate('garden', 'name location.address')
+      .populate('garden', 'name location.address image averageRating currentOccupancy')
       .sort('-createdAt')
       .limit(parseInt(limit))
-      .skip(parseInt(skip));
+      .skip(parseInt(skip))
+      .lean(); // Use lean() for better performance on read-only queries
 
     const total = await Visit.countDocuments(query);
 
@@ -221,16 +231,28 @@ const getMyVisits = async (req, res) => {
 
 const getActiveVisit = async (req, res) => {
   try {
+    const { fields } = req.query;
+    
+    // Default optimized field selection for active visit
+    let selectFields = 'checkInTime garden dogs status notes createdAt';
+    
+    // Allow frontend to specify custom fields
+    if (fields) {
+      selectFields = fields.split(',').join(' ');
+    }
+
     const visit = await Visit.findOne({
       user: req.userId,
       status: 'active'
     })
+      .select(selectFields)
       .populate({
         path: 'dogs',
         select: 'name breed age image',
         match: { isActive: { $ne: false } } // Only populate active dogs
       })
-      .populate('garden');
+      .populate('garden', 'name location.address image averageRating currentOccupancy maxDogs openingHours')
+      .lean(); // Use lean() for better performance
 
     res.json({ visit });
   } catch (error) {

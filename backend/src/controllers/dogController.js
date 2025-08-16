@@ -4,49 +4,69 @@ const { validationResult } = require('express-validator');
 
 const getMyDogs = async (req, res) => {
   try {
+    const { fields } = req.query;
+    
+    // Default optimized field selection for dogs list
+    let selectFields = 'name breed age image owner isActive createdAt';
+    
+    // Allow frontend to specify custom fields
+    if (fields) {
+      selectFields = fields.split(',').join(' ');
+    }
+
     const dogs = await Dog.find({ owner: req.userId, isActive: true })
-      .sort('-createdAt');
+      .select(selectFields)
+      .sort('-createdAt')
+      .lean(); // Use lean() for better performance
 
-    // Get owner's friends count
-    const friends = await Friendship.getFriends(req.userId);
-    const friendsCount = friends.length;
+    // Only calculate stats if detailed fields are requested
+    const includeStats = !fields || fields.includes('totalVisits') || fields.includes('photosCount') || fields.includes('friendsCount');
+    
+    if (includeStats) {
+      // Get owner's friends count
+      const friends = await Friendship.getFriends(req.userId);
+      const friendsCount = friends.length;
 
-    // Calculate stats for each dog
-    const dogsWithStats = await Promise.all(dogs.map(async (dog) => {
-      const dogObj = dog.toObject();
-      
-      // Count visits for this dog
-      try {
-        const Visit = require('../models/Visit');
-        const visitCount = await Visit.countDocuments({
-          dogs: dog._id,
-          status: { $in: ['active', 'completed'] }
-        });
-        dogObj.totalVisits = visitCount;
-      } catch (error) {
-        console.error('Error counting visits for dog:', error);
-        dogObj.totalVisits = 0;
-      }
+      // Calculate stats for each dog
+      const dogsWithStats = await Promise.all(dogs.map(async (dog) => {
+        const dogObj = { ...dog }; // dogs is already lean
+        
+        // Count visits for this dog
+        try {
+          const Visit = require('../models/Visit');
+          const visitCount = await Visit.countDocuments({
+            dogs: dog._id,
+            status: { $in: ['active', 'completed'] }
+          });
+          dogObj.totalVisits = visitCount;
+        } catch (error) {
+          console.error('Error counting visits for dog:', error);
+          dogObj.totalVisits = 0;
+        }
 
-      // Count photos for this dog
-      try {
-        const Photo = require('../models/Photo');
-        const photoCount = await Photo.countDocuments({
-          entityType: 'dog',
-          entityId: dog._id,
-          isActive: true
-        });
-        dogObj.photosCount = photoCount;
-      } catch (error) {
-        console.error('Error counting photos for dog:', error);
-        dogObj.photosCount = 0;
-      }
+        // Count photos for this dog
+        try {
+          const Photo = require('../models/Photo');
+          const photoCount = await Photo.countDocuments({
+            entityType: 'dog',
+            entityId: dog._id,
+            isActive: true
+          });
+          dogObj.photosCount = photoCount;
+        } catch (error) {
+          console.error('Error counting photos for dog:', error);
+          dogObj.photosCount = 0;
+        }
 
-      dogObj.friendsCount = friendsCount;
-      return dogObj;
-    }));
+        dogObj.friendsCount = friendsCount;
+        return dogObj;
+      }));
 
-    res.json(dogsWithStats);
+      res.json(dogsWithStats);
+    } else {
+      // Return dogs without stats for better performance
+      res.json(dogs);
+    }
   } catch (error) {
     console.error('Error fetching dogs:', error);
     res.status(500).json({ error: 'Error fetching dogs' });
@@ -55,7 +75,18 @@ const getMyDogs = async (req, res) => {
 
 const getDogById = async (req, res) => {
   try {
-    const dog = await Dog.findById(req.params.id).populate('owner', 'firstName lastName');
+    const { fields } = req.query;
+    
+    // Default optimized field selection for single dog
+    let selectFields = fields ? fields.split(',').join(' ') : undefined;
+    
+    let query = Dog.findById(req.params.id);
+    
+    if (selectFields) {
+      query = query.select(selectFields);
+    }
+    
+    const dog = await query.populate('owner', 'firstName lastName');
 
     if (!dog) {
       return res.status(404).json({ error: 'Dog not found' });
@@ -181,8 +212,20 @@ const deleteDog = async (req, res) => {
 
 const getDogPublicProfile = async (req, res) => {
   try {
+    const { fields } = req.query;
+    
+    // Default optimized field selection for public profile
+    let selectFields = 'name breed age size gender weight image images gallery description personality medicalInfo customProfile profileVisibility owner isActive';
+    
+    // Allow frontend to specify custom fields
+    if (fields) {
+      selectFields = fields.split(',').join(' ');
+    }
+
     const dog = await Dog.findById(req.params.id)
-      .populate('owner', 'firstName lastName _id');
+      .select(selectFields)
+      .populate('owner', 'firstName lastName _id')
+      .lean(); // Use lean() for better performance
 
     if (!dog || !dog.isActive) {
       return res.status(404).json({ error: 'Dog not found' });

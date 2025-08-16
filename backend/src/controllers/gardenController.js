@@ -11,7 +11,8 @@ const getAllGardens = async (req, res) => {
       amenities, 
       maxDistance,
       lat,
-      lng 
+      lng,
+      fields
     } = req.query;
 
     let query = { 
@@ -57,6 +58,14 @@ const getAllGardens = async (req, res) => {
       query.amenities = { $in: amenitiesArray };
     }
 
+    // Default optimized field selection for gardens list
+    let selectFields = 'name location.address image averageRating currentOccupancy maxDogs type amenities isActive createdAt';
+    
+    // Allow frontend to specify custom fields
+    if (fields) {
+      selectFields = fields.split(',').join(' ');
+    }
+
     let gardens;
 
     // If coordinates provided, search by distance
@@ -78,19 +87,26 @@ const getAllGardens = async (req, res) => {
               $maxDistance: parseInt(maxDistance) * 1000 // Convert km to meters
             }
           }
-        }).populate('manager', 'firstName lastName');
+        })
+        .select(selectFields)
+        .populate('manager', 'firstName lastName')
+        .lean(); // Use lean() for better performance
       } catch (geoError) {
         console.error('Geospatial query failed, falling back to regular query:', geoError);
         // Fallback to regular query without geospatial filter
         delete query['location.coordinates.coordinates'];
         gardens = await Garden.find(query)
+          .select(selectFields)
           .populate('manager', 'firstName lastName')
-          .sort('-createdAt');
+          .sort('-createdAt')
+          .lean();
       }
     } else {
       gardens = await Garden.find(query)
+        .select(selectFields)
         .populate('manager', 'firstName lastName')
-        .sort('-createdAt');
+        .sort('-createdAt')
+        .lean();
     }
 
     // Add current occupancy data for each garden
@@ -234,8 +250,18 @@ const getAllGardens = async (req, res) => {
 
 const getGardenById = async (req, res) => {
   try {
-    const garden = await Garden.findById(req.params.id)
-      .populate('manager', 'firstName lastName email phone');
+    const { fields } = req.query;
+    
+    // Default optimized field selection for garden details
+    let selectFields = fields ? fields.split(',').join(' ') : undefined;
+    
+    let query = Garden.findById(req.params.id);
+    
+    if (selectFields) {
+      query = query.select(selectFields);
+    }
+    
+    const garden = await query.populate('manager', 'firstName lastName email phone');
 
     if (!garden) {
       return res.status(404).json({ error: 'Garden not found' });
