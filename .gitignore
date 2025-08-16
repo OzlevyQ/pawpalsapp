@@ -4,6 +4,10 @@
 .env.development
 .env.test
 .env.production
+env.txt
+*.env.txt
+config.txt
+*config.txt
 
 # Node modules
 node_modules/
